@@ -303,8 +303,8 @@
                     <!-- Slow-Mo Speed Slider -->
                     <div id="animSpeedWrapper" class="flex items-center space-x-1.5 bg-slate-900/90 px-2 py-0.5 rounded-lg border border-slate-800 text-slate-400" title="Control photon animation speed (0.02x ultra slow-mo to 1.0x)">
                         <span>Speed:</span>
-                        <input type="range" id="animSpeed" min="0.02" max="1.0" step="0.02" value="0.16" class="w-16 accent-blue-500 cursor-pointer" oninput="updateSpeedDisplay(this.value)">
-                        <span id="speedVal" class="font-mono text-[10px] text-blue-300 w-14">0.16x</span>
+                        <input type="range" id="animSpeed" min="0.02" max="1.0" step="0.02" value="0.3" class="w-16 accent-blue-500 cursor-pointer" oninput="updateSpeedDisplay(this.value)">
+                        <span id="speedVal" class="font-mono text-[10px] text-blue-300 w-14">0.30x</span>
                     </div>
 
                     <!-- Quick Clear Button on Top Bar -->
@@ -393,8 +393,9 @@
         </section>
 
 
-        <!-- Game-Style Interactive Tutorial Tour (Spotlight on document + Floating HUD on viewport) -->
+        <!-- Game-Style Interactive Tutorial Tour (Dual Spotlights on document + Floating HUD on viewport) -->
         <div id="tutorialSpotlight" class="absolute pointer-events-none rounded-xl border-2 border-cyan-400 shadow-[0_0_25px_rgba(34,211,238,0.7),inset_0_0_15px_rgba(34,211,238,0.2)] ring-4 ring-cyan-500/20 z-40 hidden" style="transition: none !important;"></div>
+        <div id="tutorialSpotlight2" class="absolute pointer-events-none rounded-xl border-2 border-rose-400 shadow-[0_0_25px_rgba(244,63,94,0.7),inset_0_0_15px_rgba(244,63,94,0.2)] ring-4 ring-rose-500/20 z-40 hidden" style="transition: none !important;"></div>
 
         <div id="tutorialOverlay" class="fixed inset-0 z-50 pointer-events-none hidden">
             <div id="tutorialHud" class="fixed pointer-events-auto w-[360px] sm:w-[420px] bg-slate-900/95 border-2 border-cyan-500/80 rounded-2xl p-4 shadow-[0_15px_40px_rgba(0,0,0,0.85),0_0_30px_rgba(6,182,212,0.35)] backdrop-blur-xl text-slate-100 flex flex-col space-y-3 z-50">
@@ -494,7 +495,7 @@
                     </div>
 
                     <!-- Alice Chart -->
-                    <div class="bg-slate-900/90 rounded-xl p-2.5 border border-slate-800">
+                    <div id="aliceChartBlock" class="bg-slate-900/90 rounded-xl p-2.5 border border-slate-800">
                         <div class="flex flex-wrap justify-between items-center mb-1 text-[11px] text-slate-400 gap-1.5">
                             <div class="flex items-center space-x-2">
                                 <span class="font-bold">MEASURED POLARIZATIONS</span>
@@ -514,7 +515,7 @@
 
                     <!-- Alice Message & Key Fields -->
                     <div class="space-y-1.5 text-xs">
-                        <div class="bg-slate-900/70 p-2 rounded-xl border border-slate-800">
+                        <div id="aliceMsgCard" class="bg-slate-900/70 p-2 rounded-xl border border-slate-800">
                             <div class="flex flex-wrap justify-between items-center mb-1 gap-1">
                                 <span class="font-bold text-slate-300">My Message:</span>
                                 <div class="flex items-center space-x-2 text-[11px]">
@@ -663,7 +664,7 @@
                     </div>
 
                     <!-- Bob Chart -->
-                    <div class="bg-slate-900/90 rounded-xl p-2.5 border border-slate-800">
+                    <div id="bobChartBlock" class="bg-slate-900/90 rounded-xl p-2.5 border border-slate-800">
                         <div class="flex flex-wrap justify-between items-center mb-1 text-[11px] text-slate-400 gap-1.5">
                             <div class="flex items-center space-x-2">
                                 <span class="font-bold">MEASURED POLARIZATIONS</span>
@@ -683,7 +684,7 @@
 
                     <!-- Bob Message & Key Fields -->
                     <div class="space-y-1.5 text-xs">
-                        <div class="bg-slate-900/70 p-2 rounded-xl border border-slate-800">
+                        <div id="bobMsgCard" class="bg-slate-900/70 p-2 rounded-xl border border-slate-800">
                             <div class="flex justify-between items-center mb-1">
                                 <span class="font-bold text-slate-300">My Message (Optional):</span>
                                 <span class="text-slate-500 text-[11px]">Required Key Length: <strong id="bobMsgLen" class="text-slate-400 font-mono">0</strong> bits</span>
@@ -858,6 +859,9 @@
         // =====================================================================
         // GAME-STYLE INTERACTIVE TUTORIAL TOUR (HOVER SPOTLIGHT & FLOATING HUD)
         // =====================================================================
+        // =====================================================================
+        // 2. INTERACTIVE LEARNING GUIDE TOUR (GAME-STYLE FLOATING HUD)
+        // =====================================================================
         let tourActive = false;
         let currentTourStep = 1;
         let tourActionCompleted = false;
@@ -873,6 +877,19 @@
                 desc: "A 405 nm pump laser pumps crossed BBO crystals via SPDC, creating entangled state |ψ⁺⟩ = (|HH⟩+|VV⟩)/√2. In this demonstration, both photons leave the crystal with identical vertical polarization: 90°!",
                 mission: "Click 'Emit & Pause at Source' to generate the twin pair and pause them right after emission.",
                 actionBtnText: "✨ Emit & Pause at Source",
+                onEnter: () => {
+                    activePhotons = [];
+                    clearDetectorHighlights();
+                    resetTelemetryDisplay();
+                    BENCH.alice.hwp.angle = 0;
+                    BENCH.bob.hwp.angle = 0;
+                    aliceChosenBasis = '0|90';
+                    bobChosenBasis = '0|90';
+                    updateBasisButtonUI('alice', '0|90');
+                    updateBasisButtonUI('bob', '0|90');
+                    events = [];
+                    updateCharts();
+                },
                 action: () => {
                     activePhotons = [];
                     clearDetectorHighlights();
@@ -914,9 +931,28 @@
                 targetId: "benchCanvas",
                 category: "Waveplates (HWP)",
                 title: "1.2 Waveplates: Matching Basis (0|90)",
-                desc: "First, Alice and Bob choose the SAME basis: 0°|90° (HWP = 0°). Half-Wave Plates rotate linear polarization without filtering. At 0°, both photons maintain their 90° polarization unchanged.",
+                desc: "First, we look at the case where Alice and Bob choose the SAME basis: 0°|90° (HWP = 0°). Half-Wave Plates rotate linear polarization. At 0°, both photons maintain their 90° polarization unchanged.",
                 mission: "Click 'Advance to Waveplates' to fly through the HWPs and pause before the PBS cubes.",
                 actionBtnText: "▶ Advance to Waveplates",
+                onEnter: () => {
+                    BENCH.alice.hwp.angle = 0;
+                    BENCH.bob.hwp.angle = 0;
+                    aliceChosenBasis = '0|90';
+                    bobChosenBasis = '0|90';
+                    updateBasisButtonUI('alice', '0|90');
+                    updateBasisButtonUI('bob', '0|90');
+                    if (activePhotons.length === 0) {
+                        const scriptEvent = {
+                            index: 1, alice_basis: '0|90', bob_basis: '0|90', alice_hwp_deg: 0, bob_hwp_deg: 0,
+                            alice_polarization: 90, bob_polarization: 90, alice_detector: 'B', bob_detector: 'C',
+                            alice_bit: 1, bob_bit: 1, coincidence: 'B&C', basis_match: true, is_bit_flip: false
+                        };
+                        const pair = new EntangledPair(scriptEvent);
+                        pair.progress = 0.18;
+                        pair.paused = true;
+                        activePhotons = [pair];
+                    }
+                },
                 action: () => {
                     let pair = activePhotons[0];
                     if (!pair) {
@@ -942,6 +978,19 @@
                 desc: "Photons reach the PBS cubes. PBS transmits horizontal (0°, Det T/A) and reflects vertical (90°, Det B/C). With 90° polarization, Alice's photon reflects to Det B (P = 100%) and Bob's photon reflects to Det C (P = 100%).",
                 mission: "Click 'Advance to PBS Splitting' to watch both photons reflect downwards towards detectors B & C.",
                 actionBtnText: "▶ Advance to PBS Splitting",
+                onEnter: () => {
+                    if (activePhotons.length === 0) {
+                        const scriptEvent = {
+                            index: 1, alice_basis: '0|90', bob_basis: '0|90', alice_hwp_deg: 0, bob_hwp_deg: 0,
+                            alice_polarization: 90, bob_polarization: 90, alice_detector: 'B', bob_detector: 'C',
+                            alice_bit: 1, bob_bit: 1, coincidence: 'B&C', basis_match: true, is_bit_flip: false
+                        };
+                        const pair = new EntangledPair(scriptEvent);
+                        pair.progress = 0.52;
+                        pair.paused = true;
+                        activePhotons = [pair];
+                    }
+                },
                 action: () => {
                     let pair = activePhotons[0];
                     if (!pair) return;
@@ -959,6 +1008,25 @@
                 desc: "Simultaneous click: Det B & Det C fire together! Alice and Bob both detected the exact same bit: 1! Because they chose the same basis (0|90 vs 0|90), quantum entanglement guarantees 100% correlated bits for their key.",
                 mission: "Click 'Trigger Coincidence Click' to register the simultaneous detector clicks.",
                 actionBtnText: "🎯 Trigger Coincidence Click",
+                onEnter: () => {
+                    BENCH.alice.hwp.angle = 0;
+                    BENCH.bob.hwp.angle = 0;
+                    aliceChosenBasis = '0|90';
+                    bobChosenBasis = '0|90';
+                    updateBasisButtonUI('alice', '0|90');
+                    updateBasisButtonUI('bob', '0|90');
+                    if (activePhotons.length === 0) {
+                        const scriptEvent = {
+                            index: 1, alice_basis: '0|90', bob_basis: '0|90', alice_hwp_deg: 0, bob_hwp_deg: 0,
+                            alice_polarization: 90, bob_polarization: 90, alice_detector: 'B', bob_detector: 'C',
+                            alice_bit: 1, bob_bit: 1, coincidence: 'B&C', basis_match: true, is_bit_flip: false
+                        };
+                        const pair = new EntangledPair(scriptEvent);
+                        pair.progress = 0.85;
+                        pair.paused = true;
+                        activePhotons = [pair];
+                    }
+                },
                 action: () => {
                     let pair = activePhotons[0];
                     if (!pair) return;
@@ -979,10 +1047,19 @@
                 stepLabel: "Step 1.5",
                 targetId: "benchCanvas",
                 category: "Differing Bases",
-                title: "1.5 What Happens When Bases Differ?",
-                desc: "Now see what happens when 2 different bases are chosen! Alice chooses 0|90 (HWP 0°), but Bob chooses -45|45 (HWP 22.5°). Alice gets bit 0 (Det T) while Bob gets bit 1 (Det C). When bases differ, quantum mechanics yields an uncorrelated 50/50 result: even if they occasionally match by pure chance, these measurements will be sifted out in Step 6!",
-                mission: "Click 'Run Differing Bases Example' to measure a pair with mismatched bases.",
+                title: "1.5 Differing Bases (Quantum Randomness)",
+                desc: "Quantum mechanics yields an uncorrelated 50/50 result for both Alice and Bob, in this case Alice gets bit 0 (Det T) while Bob gets bit 1 (Det C). This time they got differing results but 50 percent of the time a match will still occur. However, regardless of the result, these measurements will be sifted out in Step 6!",
+                mission: "Notice Bob's HWP is already rotated to 22.5° (-45|45). Click 'Run Differing Bases Example' to measure a pair with mismatched bases.",
                 actionBtnText: "⚡ Run Differing Bases Example",
+                onEnter: () => {
+                    // Differing bases applied immediately on animation screen!
+                    BENCH.alice.hwp.angle = 0;
+                    BENCH.bob.hwp.angle = 22.5;
+                    aliceChosenBasis = '0|90';
+                    bobChosenBasis = '-45|45';
+                    updateBasisButtonUI('alice', '0|90');
+                    updateBasisButtonUI('bob', '-45|45');
+                },
                 action: () => {
                     BENCH.alice.hwp.angle = 0;
                     BENCH.bob.hwp.angle = 22.5;
@@ -1014,7 +1091,12 @@
                     const origArrival = pair.onArrival.bind(pair);
                     pair.onArrival = function() {
                         origArrival();
-                        events.push(mismatchedEvent);
+                        const match1 = events[0] || {
+                            index: 1, alice_basis: '0|90', bob_basis: '0|90', alice_hwp_deg: 0, bob_hwp_deg: 0,
+                            alice_polarization: 90, bob_polarization: 90, alice_detector: 'B', bob_detector: 'C',
+                            alice_bit: 1, bob_bit: 1, coincidence: 'B&C', basis_match: true, is_bit_flip: false
+                        };
+                        events = [match1, mismatchedEvent];
                         updateCharts();
                         updateStats();
                         completeTourAction();
@@ -1024,31 +1106,66 @@
             },
             {
                 number: 6,
-                stepLabel: "Step 2",
-                targetId: "aliceChart",
-                category: "Measurement Graph",
-                title: "2. Recording Measurements on the Graph",
-                desc: "Look at the measured polarizations graph: Measurement #1 had matching bases and will be kept (green). Measurement #2 had differing bases (blue Alice, red Bob). Even if differing bases happened to produce the same bit by luck, they cannot ensure quantum secrecy and will be removed!",
-                mission: "Click 'Inspect Graph' to highlight how the scatter plot records both measurements.",
-                actionBtnText: "📊 Inspect Graph",
+                stepLabel: "Step 2.1",
+                targetId: ["aliceChartBlock", "bobChartBlock"],
+                category: "Measurement Graphs",
+                title: "2.1 Recording Raw Measurements on Graphs",
+                desc: "Look at the two charts: Alice sees only her own measurements (in blue), and Bob sees only his own measurements (in red). Over their separate private channels, neither station knows what basis or bit the other side measured.",
+                mission: "Observe each party's private measurement points. (No action required — click 'Next →' to proceed).",
+                actionBtnText: "✓ Next Enabled (Review Graphs)",
+                onEnter: () => {
+                    const aToggle = document.getElementById('aliceShowAllToggle');
+                    const bToggle = document.getElementById('bobShowAllToggle');
+                    if (aToggle) aToggle.checked = false;
+                    if (bToggle) bToggle.checked = false;
+                    updateCharts();
+                    completeTourAction(); // Next button enabled immediately!
+                },
                 action: () => {
-                    const toggle = document.getElementById('aliceShowAllToggle');
-                    if (toggle) {
-                        toggle.checked = true;
-                        updateCharts();
-                    }
                     completeTourAction();
                 }
             },
             {
                 number: 7,
+                stepLabel: "Step 2.2",
+                targetId: ["aliceChartBlock", "bobChartBlock"],
+                category: "Measurement Graphs",
+                title: "2.2 Comparing Measurements (Show All Checkmark)",
+                desc: "Now click 'Show All Results' to inspect both parties' results together. Measurement #1 had matching bases and will be kept (green). Measurement #2 had differing bases (blue Alice, red Bob). Even if differing bases happened to produce the same bit by luck, they cannot ensure quantum secrecy and will be removed during sifting!",
+                mission: "Click 'Show All Results' to reveal both sets of points together on the charts.",
+                actionBtnText: "📊 Show All Results",
+                onEnter: () => {
+                    const aToggle = document.getElementById('aliceShowAllToggle');
+                    const bToggle = document.getElementById('bobShowAllToggle');
+                    if (aToggle) aToggle.checked = false;
+                    if (bToggle) bToggle.checked = false;
+                    updateCharts();
+                },
+                action: () => {
+                    const aToggle = document.getElementById('aliceShowAllToggle');
+                    const bToggle = document.getElementById('bobShowAllToggle');
+                    if (aToggle) aToggle.checked = true;
+                    if (bToggle) bToggle.checked = true;
+                    updateCharts();
+                    completeTourAction();
+                }
+            },
+            {
+                number: 8,
                 stepLabel: "Step 3",
-                targetId: "aliceMsgText",
+                targetId: "aliceMsgCard",
                 category: "Key Length",
                 title: "3. Determining Key Length for One-Time Pad",
                 desc: "One-Time Pad rule: Secret Key length must be ≥ Message length. For Alice's secret message 'photon' (30 bits), we need at least 30 sifted key bits. Since ~50% of pairs have differing bases, we recommend measuring ~75 pairs.",
-                mission: "Click 'Set Message to photon' to calculate the required key length and recommended pairs.",
-                actionBtnText: "📝 Set Message to 'photon'",
+                mission: "Notice the message box is currently empty. Click 'Enter 'photon' as Message' to calculate the required key length.",
+                actionBtnText: "📝 Enter 'photon' as Message",
+                onEnter: () => {
+                    const el = document.getElementById('aliceMsgText');
+                    if (el) {
+                        el.value = '';
+                        updateMessageBits();
+                    }
+                },
                 action: () => {
                     const el = document.getElementById('aliceMsgText');
                     if (el) {
@@ -1059,14 +1176,21 @@
                 }
             },
             {
-                number: 8,
+                number: 9,
                 stepLabel: "Step 4",
-                targetId: "aliceF1",
+                targetId: [["aliceF1", "aliceF2"], ["bobF1", "bobF2"]],
                 category: "Basis Selection",
                 title: "4. Independent Basis Choice (HWP Controls)",
                 desc: "Here is where Alice and Bob choose between 0°|90° (F1, HWP 0°) and -45°|45° (F2, HWP 22.5°). In E91 QKD, both parties choose randomly and independently for every pair without any communication beforehand!",
                 mission: "Click 'Enable Random Bases' so both stations choose randomly during the batch.",
                 actionBtnText: "🎲 Enable Random Bases",
+                onEnter: () => {
+                    const el = document.getElementById('aliceMsgText');
+                    if (el && el.value !== 'photon') {
+                        el.value = 'photon';
+                        updateMessageBits();
+                    }
+                },
                 action: () => {
                     const toggle = document.getElementById('randomBasisToggle');
                     if (toggle) toggle.checked = true;
@@ -1075,7 +1199,7 @@
                 }
             },
             {
-                number: 9,
+                number: 10,
                 stepLabel: "Step 5",
                 targetId: "emitSingleBtn",
                 category: "Data Collection",
@@ -1092,11 +1216,11 @@
                 }
             },
             {
-                number: 10,
+                number: 11,
                 stepLabel: "Step 6",
-                targetId: "aliceF3",
+                targetId: ["aliceF3", "bobF3"],
                 category: "Public Sifting",
-                title: "6. Basis Reconciliation [F3]",
+                title: "6. Filter by Bases [F3]",
                 desc: "Alice and Bob announce which basis they used over a public channel (never their bit values!). Mismatched pairs (~50%) are discarded, leaving only correlated measurements.",
                 mission: "Press F3 or click 'Filter by Bases' to sift out differing bases.",
                 actionBtnText: "🔍 Filter by Bases [F3]",
@@ -1106,9 +1230,9 @@
                 }
             },
             {
-                number: 11,
+                number: 12,
                 stepLabel: "Step 7",
-                targetId: "aliceKeyDisplay",
+                targetId: ["aliceKeyDisplay", "bobKeyDisplay"],
                 category: "Key Extraction",
                 title: "7. Extracting Shared Keys [F4]",
                 desc: "Correlated events are extracted into binary keys. Both Alice and Bob now possess identical secret keys without ever transmitting the key over the air!",
@@ -1121,7 +1245,7 @@
                 }
             },
             {
-                number: 12,
+                number: 13,
                 stepLabel: "Step 8",
                 targetId: "aliceF5",
                 category: "XOR Encryption",
@@ -1135,12 +1259,12 @@
                 }
             },
             {
-                number: 13,
+                number: 14,
                 stepLabel: "Step 9",
                 targetId: "bobRecvText",
                 category: "Decryption",
                 title: "9. Public Transmission & Decryption [F6/F7]",
-                desc: "Alice transmits ciphertext over the public channel [F6]. Bob receives it and applies XOR with his key [F7]: Plaintext = Ciphertext ⊕ Key, perfectly restoring Alice's message!",
+                desc: "Alice transmits ciphertext over the public channel [F6]. Bob receives the encrypted ciphertext, and then applies XOR with his key [F7]: Plaintext = Ciphertext ⊕ Key, restoring Alice's plaintext under Decrypted Message!",
                 mission: "Click 'Send & Decrypt' to transmit and decrypt on Bob's window.",
                 actionBtnText: "📨 Send & Decrypt [F6 & F7]",
                 action: () => {
@@ -1152,18 +1276,18 @@
                 }
             },
             {
-                number: 14,
+                number: 15,
                 stepLabel: "Step 10",
                 targetId: "simErrorRateWrapper",
                 category: "Physical Noise",
                 title: "10. Physical Noise & Bit-Flip Errors",
                 desc: "In real setups (like Thorlabs EDU-QOP1), physical imperfections exist: ~5% PBS extinction leakage, alignment drift, and detector dark counts. Even 1 flipped bit can corrupt a decrypted letter! During this tutorial, error rate was set to 0% for demonstration. Real E91 protocols run QBER checking and error correction (CASCADE/LDPC) before using the key.",
-                mission: "Click 'Finish Tutorial' to restore normal settings and finish the guided walkthrough.",
+                mission: "Click 'Finish Tutorial' to restore nominal settings and finish the guided walkthrough directly.",
                 actionBtnText: "🎉 Finish Tutorial",
                 action: () => {
                     const errSel = document.getElementById('errorRateSelect');
                     if (errSel) errSel.value = '0.05';
-                    completeTourAction();
+                    closeInteractiveGuide();
                 }
             }
         ];
@@ -1184,8 +1308,6 @@
             tourActive = true;
             const overlay = document.getElementById('tutorialOverlay');
             if (overlay) overlay.classList.remove('hidden');
-            const spotlight = document.getElementById('tutorialSpotlight');
-            if (spotlight) spotlight.classList.remove('hidden');
             const guideBtn = document.getElementById('toggleGuideBtn');
             if (guideBtn) guideBtn.classList.add('ring-2', 'ring-white');
             renderTourStep(1);
@@ -1197,10 +1319,19 @@
             if (errSel) errSel.value = guidePrevErrorRate;
             const overlay = document.getElementById('tutorialOverlay');
             if (overlay) overlay.classList.add('hidden');
-            const spotlight = document.getElementById('tutorialSpotlight');
-            if (spotlight) spotlight.classList.add('hidden');
+            const s1 = document.getElementById('tutorialSpotlight');
+            if (s1) s1.classList.add('hidden');
+            const s2 = document.getElementById('tutorialSpotlight2');
+            if (s2) s2.classList.add('hidden');
             const guideBtn = document.getElementById('toggleGuideBtn');
             if (guideBtn) guideBtn.classList.remove('ring-2', 'ring-white');
+            
+            // Restore default message outside guide mode if empty
+            const msgInput = document.getElementById('aliceMsgText');
+            if (msgInput && !msgInput.value) {
+                msgInput.value = 'photon';
+                updateMessageBits();
+            }
             activePhotons.forEach(p => { p.paused = false; p.targetProgress = 1.0; });
         }
 
@@ -1220,6 +1351,12 @@
             if (actionBtn) actionBtn.classList.remove('ring-2', 'ring-emerald-400');
 
             document.getElementById('tourPrevBtn').disabled = (currentTourStep === 1);
+            
+            // Execute step setup on enter
+            if (typeof step.onEnter === 'function') {
+                step.onEnter();
+            }
+
             updateNextButtonState();
 
             const dotsContainer = document.getElementById('tourDots');
@@ -1234,11 +1371,128 @@
                 }
             }
 
-            const targetEl = document.getElementById(step.targetId);
-            if (targetEl) {
-                targetEl.scrollIntoView({ behavior: 'auto', block: 'nearest' });
-                positionTourHud(targetEl);
-                requestAnimationFrame(() => positionTourHud(targetEl));
+            // Scroll target into view and position spotlights
+            scrollAndPositionSpotlight(step.targetId);
+        }
+
+        function getEnclosingRect(targets) {
+            const list = Array.isArray(targets) ? targets : [targets];
+            const valid = list.map(t => (typeof t === 'string' ? document.getElementById(t) : t)).filter(Boolean);
+            if (valid.length === 0) return null;
+            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+            for (const el of valid) {
+                const r = el.getBoundingClientRect();
+                if (r.width === 0 && r.height === 0) continue;
+                if (r.left < minX) minX = r.left;
+                if (r.top < minY) minY = r.top;
+                if (r.right > maxX) maxX = r.right;
+                if (r.bottom > maxY) maxY = r.bottom;
+            }
+            if (minX === Infinity) return null;
+            return {
+                left: minX,
+                top: minY,
+                right: maxX,
+                bottom: maxY,
+                width: maxX - minX,
+                height: maxY - minY
+            };
+        }
+
+        function scrollAndPositionSpotlight(targetConfig) {
+            // Find first element to scroll into view
+            let scrollEl = null;
+            if (typeof targetConfig === 'string') {
+                scrollEl = document.getElementById(targetConfig);
+            } else if (Array.isArray(targetConfig)) {
+                const first = targetConfig[0];
+                if (typeof first === 'string') scrollEl = document.getElementById(first);
+                else if (Array.isArray(first)) scrollEl = document.getElementById(first[0]);
+            }
+            if (scrollEl) {
+                scrollEl.scrollIntoView({ behavior: 'auto', block: 'nearest' });
+            }
+            positionTourHud(targetConfig);
+            requestAnimationFrame(() => positionTourHud(targetConfig));
+        }
+
+        function positionTourHud(targetConfig) {
+            const s1 = document.getElementById('tutorialSpotlight');
+            const s2 = document.getElementById('tutorialSpotlight2');
+            if (!s1) return;
+
+            const scrollX = window.pageXOffset || document.documentElement.scrollLeft;
+            const scrollY = window.pageYOffset || document.documentElement.scrollTop;
+            const pad = 5;
+
+            let firstTargetForHud = null;
+
+            if (Array.isArray(targetConfig) && targetConfig.length === 2 && (Array.isArray(targetConfig[0]) || typeof targetConfig[0] === 'string')) {
+                // Dual targets (e.g. Alice & Bob)
+                const rect1 = getEnclosingRect(targetConfig[0]);
+                const rect2 = getEnclosingRect(targetConfig[1]);
+
+                if (rect1) {
+                    s1.style.top = `${rect1.top + scrollY - pad}px`;
+                    s1.style.left = `${rect1.left + scrollX - pad}px`;
+                    s1.style.width = `${rect1.width + pad * 2}px`;
+                    s1.style.height = `${rect1.height + pad * 2}px`;
+                    s1.classList.remove('hidden');
+                    firstTargetForHud = rect1;
+                } else {
+                    s1.classList.add('hidden');
+                }
+
+                if (rect2 && s2) {
+                    s2.style.top = `${rect2.top + scrollY - pad}px`;
+                    s2.style.left = `${rect2.left + scrollX - pad}px`;
+                    s2.style.width = `${rect2.width + pad * 2}px`;
+                    s2.style.height = `${rect2.height + pad * 2}px`;
+                    s2.classList.remove('hidden');
+                } else if (s2) {
+                    s2.classList.add('hidden');
+                }
+            } else {
+                // Single target
+                const rect = getEnclosingRect(targetConfig);
+                if (rect) {
+                    s1.style.top = `${rect.top + scrollY - pad}px`;
+                    s1.style.left = `${rect.left + scrollX - pad}px`;
+                    s1.style.width = `${rect.width + pad * 2}px`;
+                    s1.style.height = `${rect.height + pad * 2}px`;
+                    s1.classList.remove('hidden');
+                    firstTargetForHud = rect;
+                } else {
+                    s1.classList.add('hidden');
+                }
+                if (s2) s2.classList.add('hidden');
+            }
+
+            if (firstTargetForHud) {
+                positionTourCard(firstTargetForHud);
+            }
+        }
+
+        function positionTourCard(rect) {
+            const hud = document.getElementById('tutorialHud');
+            if (!hud || !rect) return;
+
+            const hudWidth = hud.offsetWidth || 380;
+            const hudHeight = hud.offsetHeight || 260;
+            const vpWidth = window.innerWidth;
+            const vpHeight = window.innerHeight;
+
+            // Check if highlighted element overlaps with bottom-right corner area (viewport-relative)
+            const overlapsBottomRight = (rect.right > (vpWidth - hudWidth - 30)) && (rect.bottom > (vpHeight - hudHeight - 30));
+
+            hud.style.top = 'auto';
+            hud.style.bottom = '20px';
+            if (overlapsBottomRight) {
+                hud.style.left = '20px';
+                hud.style.right = 'auto';
+            } else {
+                hud.style.left = 'auto';
+                hud.style.right = '20px';
             }
         }
 
@@ -1270,47 +1524,6 @@
             }
         }
 
-        function positionTourHud(targetEl) {
-            const spotlight = document.getElementById('tutorialSpotlight');
-            if (!targetEl || !spotlight) return;
-
-            const rect = targetEl.getBoundingClientRect();
-            const scrollX = window.pageXOffset || document.documentElement.scrollLeft;
-            const scrollY = window.pageYOffset || document.documentElement.scrollTop;
-            const pad = 4;
-            
-            spotlight.style.top = `${rect.top + scrollY - pad}px`;
-            spotlight.style.left = `${rect.left + scrollX - pad}px`;
-            spotlight.style.width = `${rect.width + pad * 2}px`;
-            spotlight.style.height = `${rect.height + pad * 2}px`;
-
-            positionTourCard(targetEl);
-        }
-
-        function positionTourCard(targetEl) {
-            const hud = document.getElementById('tutorialHud');
-            if (!targetEl || !hud) return;
-
-            const rect = targetEl.getBoundingClientRect();
-            const hudWidth = hud.offsetWidth || 380;
-            const hudHeight = hud.offsetHeight || 260;
-            const vpWidth = window.innerWidth;
-            const vpHeight = window.innerHeight;
-
-            // Check if highlighted element overlaps with bottom-right corner area (viewport-relative)
-            const overlapsBottomRight = (rect.right > (vpWidth - hudWidth - 30)) && (rect.bottom > (vpHeight - hudHeight - 30));
-
-            hud.style.top = 'auto';
-            hud.style.bottom = '20px';
-            if (overlapsBottomRight) {
-                hud.style.left = '20px';
-                hud.style.right = 'auto';
-            } else {
-                hud.style.left = 'auto';
-                hud.style.right = '20px';
-            }
-        }
-
         function nextTourStep() {
             if (currentTourStep < tourSteps.length) {
                 renderTourStep(currentTourStep + 1);
@@ -1320,7 +1533,9 @@
         }
 
         function prevTourStep() {
-            if (currentTourStep > 1) renderTourStep(currentTourStep - 1);
+            if (currentTourStep > 1) {
+                renderTourStep(currentTourStep - 1);
+            }
         }
 
         function executeTourAction() {
@@ -1400,7 +1615,7 @@
                 clearDetectorHighlights(); // Instantly clear previous highlights when new pair is emitted
                 this.event = simEvent;
                 this.progress = 0; // 0 to 1
-                const speedFactor = parseFloat(document.getElementById('animSpeed').value || 0.16);
+                const speedFactor = parseFloat(document.getElementById('animSpeed').value || 0.3);
                 this.speed = 0.007 * speedFactor;
                 this.alive = true;
                 this.paused = false;
@@ -3674,8 +3889,6 @@
                     decryptedBits += (cBit ^ kBit).toString();
                 }
                 const restoredText = bitsToText(decryptedBits, receivedByBob.mode);
-                document.getElementById('bobRecvText').innerHTML = `<span class="text-emerald-400 font-bold">${restoredText}</span>`;
-                document.getElementById('bobRecvBits').innerText = decryptedBits;
                 const decTextEl = document.getElementById('bobDecryptedText');
                 const decBitsEl = document.getElementById('bobDecryptedBits');
                 if (decTextEl) decTextEl.innerText = restoredText;
@@ -3702,8 +3915,6 @@
                     decryptedBits += (cBit ^ kBit).toString();
                 }
                 const restoredText = bitsToText(decryptedBits, receivedByAlice.mode);
-                document.getElementById('aliceRecvText').innerHTML = `<span class="text-emerald-400 font-bold">${restoredText}</span>`;
-                document.getElementById('aliceRecvBits').innerText = decryptedBits;
                 const decTextEl = document.getElementById('aliceDecryptedText');
                 const decBitsEl = document.getElementById('aliceDecryptedBits');
                 if (decTextEl) decTextEl.innerText = restoredText;
