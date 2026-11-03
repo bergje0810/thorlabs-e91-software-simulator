@@ -1168,6 +1168,11 @@
             }
         ];
 
+        function toggleInteractiveGuide() {
+            if (tourActive) closeInteractiveGuide();
+            else startInteractiveGuide();
+        }
+
         function startInteractiveGuide() {
             if (useRealHardware) return;
             setViewMode('dual');
@@ -1181,6 +1186,8 @@
             if (overlay) overlay.classList.remove('hidden');
             const spotlight = document.getElementById('tutorialSpotlight');
             if (spotlight) spotlight.classList.remove('hidden');
+            const guideBtn = document.getElementById('toggleGuideBtn');
+            if (guideBtn) guideBtn.classList.add('ring-2', 'ring-white');
             renderTourStep(1);
         }
 
@@ -1192,6 +1199,8 @@
             if (overlay) overlay.classList.add('hidden');
             const spotlight = document.getElementById('tutorialSpotlight');
             if (spotlight) spotlight.classList.add('hidden');
+            const guideBtn = document.getElementById('toggleGuideBtn');
+            if (guideBtn) guideBtn.classList.remove('ring-2', 'ring-white');
             activePhotons.forEach(p => { p.paused = false; p.targetProgress = 1.0; });
         }
 
