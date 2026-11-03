@@ -395,10 +395,9 @@
 
         <!-- Game-Style Interactive Tutorial Tour Overlay (Spotlight & Floating HUD) -->
         <div id="tutorialOverlay" class="fixed inset-0 z-50 pointer-events-none hidden transition-opacity duration-300">
-            <div id="tutorialBackdrop" class="absolute inset-0 bg-slate-950/70 backdrop-blur-[2px] pointer-events-auto" onclick="closeInteractiveGuide()"></div>
             <div id="tutorialSpotlight" class="absolute pointer-events-none rounded-xl transition-all duration-300 ease-out border-2 border-cyan-400 shadow-[0_0_30px_rgba(34,211,238,0.7),inset_0_0_20px_rgba(34,211,238,0.2)] ring-4 ring-cyan-500/20"></div>
 
-            <div id="tutorialHud" class="absolute pointer-events-auto w-[360px] sm:w-[420px] bg-slate-900/95 border-2 border-cyan-500/80 rounded-2xl p-4 shadow-[0_15px_40px_rgba(0,0,0,0.85),0_0_30px_rgba(6,182,212,0.35)] backdrop-blur-xl transition-all duration-300 ease-out text-slate-100 flex flex-col space-y-3 z-10">
+            <div id="tutorialHud" class="fixed pointer-events-auto w-[360px] sm:w-[420px] bg-slate-900/95 border-2 border-cyan-500/80 rounded-2xl p-4 shadow-[0_15px_40px_rgba(0,0,0,0.85),0_0_30px_rgba(6,182,212,0.35)] backdrop-blur-xl transition-all duration-300 ease-out text-slate-100 flex flex-col space-y-3 z-50">
                 <div class="flex items-center justify-between border-b border-slate-800 pb-2">
                     <div class="flex items-center space-x-2">
                         <span class="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-cyan-500/20 text-cyan-300 border border-cyan-500/40" id="tourStepBadge">
@@ -695,6 +694,10 @@
                                     -
                                 </div>
                             </div>
+                            <div class="text-[10px] text-slate-400 mt-1 flex flex-wrap items-center justify-between gap-1">
+                                <span>Key length must be &ge; Message length.</span>
+                                <span>Rec. Measurements: <strong id="bobRecPairsBadge" class="text-rose-400 font-mono">20</strong> pairs</span>
+                            </div>
                         </div>
 
                         <div class="bg-slate-900/70 p-2 rounded-xl border border-slate-800">
@@ -731,8 +734,8 @@
 
                         <div class="bg-slate-900/70 p-2 rounded-xl border border-slate-800">
                             <div class="flex justify-between items-center mb-0.5">
-                                <span class="font-bold text-blue-400">Received Message:</span>
-                                <span class="text-slate-500 text-[11px]">Required Key Length: <strong id="bobRecvLen" class="text-blue-400 font-mono">0</strong> bits</span>
+                                <span class="font-bold text-purple-400">Received Message:</span>
+                                <span class="text-slate-500 text-[11px]">Required Key Length: <strong id="bobRecvLen" class="text-purple-400 font-mono">0</strong> bits</span>
                             </div>
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-1.5">
                                 <div id="bobRecvText" class="bg-slate-950/80 py-1 px-2 rounded-lg border border-slate-800 font-mono text-slate-300 text-xs flex items-center min-h-[28px]">
@@ -1025,20 +1028,18 @@
             const vpWidth = window.innerWidth;
             const vpHeight = window.innerHeight;
 
-            let hudTop;
-            if (rect.bottom + hudHeight + 20 < vpHeight) {
-                hudTop = rect.bottom + 12;
-            } else if (rect.top - hudHeight - 20 > 0) {
-                hudTop = rect.top - hudHeight - 12;
+            // Check if highlighted element overlaps with bottom-right corner area
+            const overlapsBottomRight = (rect.right > (vpWidth - hudWidth - 30)) && (rect.bottom > (vpHeight - hudHeight - 30));
+
+            hud.style.top = 'auto';
+            hud.style.bottom = '20px';
+            if (overlapsBottomRight) {
+                hud.style.left = '20px';
+                hud.style.right = 'auto';
             } else {
-                hudTop = Math.max(20, (vpHeight - hudHeight) / 2);
+                hud.style.left = 'auto';
+                hud.style.right = '20px';
             }
-
-            let hudLeft = rect.left + (rect.width / 2) - (hudWidth / 2);
-            hudLeft = Math.max(16, Math.min(vpWidth - hudWidth - 16, hudLeft));
-
-            hud.style.top = `${hudTop}px`;
-            hud.style.left = `${hudLeft}px`;
         }
 
         function nextTourStep() {
@@ -2951,6 +2952,11 @@
             if (bitsEl) bitsEl.innerText = formatted.trim() || "-";
             const lenEl = document.getElementById('bobMsgLen');
             if (lenEl) lenEl.innerText = bits.length;
+
+            const recPairs = Math.max(20, Math.ceil((bits.length * 2.5) / 5) * 5);
+            const recEl = document.getElementById('bobRecPairsBadge');
+            if (recEl) recEl.innerText = recPairs;
+
             if (bobEncrypted) {
                 bobEncrypted = false;
                 bobCiphertext = "";
