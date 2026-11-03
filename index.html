@@ -100,8 +100,8 @@
             <button class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 font-bold" onclick="openPopoutBob()">
                 ⧉ Dual Screen Pop-Out
             </button>
-            <button class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold shadow" onclick="toggleGuide()">
-                📖 Toggle Learning Guide
+            <button id="toggleGuideBtn" class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold shadow transition-all flex items-center space-x-1" onclick="toggleInteractiveGuide()">
+                <span>🎯 Interactive Guide</span>
             </button>
         </div>
     </header>
@@ -393,57 +393,50 @@
         </section>
 
 
-        <!-- ================================================================= -->
-        <!-- 2. INTERACTIVE STEP-BY-STEP LEARNING ENVIRONMENT                  -->
-        <!-- ================================================================= -->
-        <section id="guideSection" class="glass-panel rounded-2xl p-5 border-blue-500/40 shadow-xl transition-all hidden">
-            <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
-                <div class="flex items-center space-x-3">
-                    <span class="px-2.5 py-1 rounded bg-blue-600/30 text-blue-400 border border-blue-500/40 font-mono text-xs font-black">
-                        LEARNING GUIDE
-                    </span>
-                    <h3 class="text-base font-black text-white">
-                        Step-by-Step Educational Walkthrough: How E91 Works in the Thorlabs Kit
-                    </h3>
+        <!-- Game-Style Interactive Tutorial Tour Overlay (Spotlight & Floating HUD) -->
+        <div id="tutorialOverlay" class="fixed inset-0 z-50 pointer-events-none hidden transition-opacity duration-300">
+            <div id="tutorialBackdrop" class="absolute inset-0 bg-slate-950/70 backdrop-blur-[2px] pointer-events-auto" onclick="closeInteractiveGuide()"></div>
+            <div id="tutorialSpotlight" class="absolute pointer-events-none rounded-xl transition-all duration-300 ease-out border-2 border-cyan-400 shadow-[0_0_30px_rgba(34,211,238,0.7),inset_0_0_20px_rgba(34,211,238,0.2)] ring-4 ring-cyan-500/20"></div>
+
+            <div id="tutorialHud" class="absolute pointer-events-auto w-[360px] sm:w-[420px] bg-slate-900/95 border-2 border-cyan-500/80 rounded-2xl p-4 shadow-[0_15px_40px_rgba(0,0,0,0.85),0_0_30px_rgba(6,182,212,0.35)] backdrop-blur-xl transition-all duration-300 ease-out text-slate-100 flex flex-col space-y-3 z-10">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                    <div class="flex items-center space-x-2">
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-cyan-500/20 text-cyan-300 border border-cyan-500/40" id="tourStepBadge">
+                            Step 1 / 8
+                        </span>
+                        <span class="text-xs font-bold text-slate-400" id="tourCategory">SPDC Source</span>
+                    </div>
+                    <button class="text-slate-400 hover:text-white text-sm px-1.5 py-0.5 rounded hover:bg-slate-800" onclick="closeInteractiveGuide()" title="Close Tour (Esc)">✕</button>
                 </div>
-                <div class="text-xs text-slate-400 flex items-center space-x-2">
-                    <span>Step <strong id="stepNum" class="text-blue-400 font-mono text-sm">1</strong> of 8</span>
-                    <button class="text-slate-400 hover:text-white" onclick="toggleGuide()">✕</button>
+
+                <div>
+                    <h4 class="text-sm sm:text-base font-black text-white" id="tourTitle">1. The Entangled Source</h4>
+                    <p class="text-xs text-slate-300 leading-relaxed mt-1" id="tourDescription">A 405 nm pump laser produces polarization-entangled pairs in Bell state |ψ⁺⟩.</p>
                 </div>
-            </div>
 
-            <!-- Stepper Progress Bar -->
-            <div class="grid grid-cols-4 md:grid-cols-8 gap-1.5 mb-4 text-xs font-mono font-bold">
-                <button class="py-1 px-1 rounded border text-center transition-all step-active" id="stepPill1" onclick="jumpToStep(1)">1. Source</button>
-                <button class="py-1 px-1 rounded border text-center transition-all border-slate-800 text-slate-500" id="stepPill2" onclick="jumpToStep(2)">2. Message</button>
-                <button class="py-1 px-1 rounded border text-center transition-all border-slate-800 text-slate-500" id="stepPill3" onclick="jumpToStep(3)">3. Bases</button>
-                <button class="py-1 px-1 rounded border text-center transition-all border-slate-800 text-slate-500" id="stepPill4" onclick="jumpToStep(4)">4. Measure</button>
-                <button class="py-1 px-1 rounded border text-center transition-all border-slate-800 text-slate-500" id="stepPill5" onclick="jumpToStep(5)">5. Sift</button>
-                <button class="py-1 px-1 rounded border text-center transition-all border-slate-800 text-slate-500" id="stepPill6" onclick="jumpToStep(6)">6. Key</button>
-                <button class="py-1 px-1 rounded border text-center transition-all border-slate-800 text-slate-500" id="stepPill7" onclick="jumpToStep(7)">7. Encrypt</button>
-                <button class="py-1 px-1 rounded border text-center transition-all border-slate-800 text-slate-500" id="stepPill8" onclick="jumpToStep(8)">8. Decrypt</button>
-            </div>
+                <div class="bg-cyan-950/30 border border-cyan-800/50 rounded-xl p-2.5 flex items-start space-x-2 text-xs">
+                    <span class="text-cyan-400 text-sm">🎯</span>
+                    <div class="flex-1">
+                        <span class="font-bold text-cyan-300 block text-[11px] uppercase tracking-wide">Action:</span>
+                        <span id="tourMission" class="text-slate-200">Watch the photons split into Alice (left) and Bob (right) detectors.</span>
+                    </div>
+                </div>
 
-            <!-- Step Content Box -->
-            <div id="stepCard" class="bg-slate-900/80 rounded-xl p-4 border border-slate-800 space-y-3">
-                <!-- Dynamically populated by JS renderStep() -->
-            </div>
-
-            <!-- Navigation Controls -->
-            <div class="flex items-center justify-between pt-3 text-xs">
-                <button id="prevStepBtn" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold border border-slate-700 disabled:opacity-40" onclick="prevStep()">
-                    ← Previous Step
+                <button id="tourActionBtn" class="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-black text-xs shadow-lg shadow-cyan-500/25 transition-all flex items-center justify-center space-x-1.5" onclick="executeTourAction()">
+                    <span>⚡ Try This Action</span>
                 </button>
-                <div class="flex items-center space-x-2">
-                    <button id="stepActionBtn" class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold shadow flex items-center space-x-1.5" onclick="executeCurrentStepAction()">
-                        <span>⚡ Try This Step in Simulator</span>
+
+                <div class="flex items-center justify-between pt-1 border-t border-slate-800 text-xs">
+                    <button id="tourPrevBtn" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold border border-slate-700 disabled:opacity-30 disabled:pointer-events-none" onclick="prevTourStep()">
+                        ← Back
                     </button>
-                    <button id="nextStepBtn" class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold shadow flex items-center space-x-1" onclick="nextStep()">
-                        <span>Next Step →</span>
+                    <div id="tourDots" class="flex items-center space-x-1"></div>
+                    <button id="tourNextBtn" class="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold disabled:opacity-30 disabled:pointer-events-none shadow" onclick="nextTourStep()">
+                        Next →
                     </button>
                 </div>
             </div>
-        </section>
+        </div>
 
 
         <!-- ================================================================= -->
@@ -860,163 +853,76 @@
         }
 
         // =====================================================================
-        // STEP-BY-STEP LEARNING GUIDE DATA & FUNCTIONS
+        // GAME-STYLE INTERACTIVE TUTORIAL TOUR (HOVER SPOTLIGHT & FLOATING HUD)
         // =====================================================================
-        const stepsData = [
+        let tourActive = false;
+        let currentTourStep = 1;
+
+        const tourSteps = [
             {
                 number: 1,
-                title: "The Entangled Photon Source & 4-Detector Architecture",
-                subtitle: "Physics: Spontaneous Parametric Down-Conversion (SPDC) and Bell State |&psi;⁺&rang;",
-                explanation: `
-                    <p>In the Thorlabs <strong>EDU-QOPA1(/M)</strong> kit, a 405&nbsp;nm violet diode laser pumps a pair of crossed BBO (beta-barium borate) non-linear crystals. Through SPDC, pump photons occasionally split into two 810&nbsp;nm infrared photons in the polarization-entangled Bell state:</p>
-                    <div class="p-2 bg-slate-950 rounded border border-slate-800 font-mono text-cyan-300 text-center my-2 text-xs">
-                        |&psi;⁺&rang; = 1/&radic;2 (|H H&rang; + |V V&rang;)
-                    </div>
-                    <p>This means if both photons are measured in the same basis, they will <em>always yield identical polarizations</em>! The setup features 4 detectors:</p>
-                    <ul class="list-disc list-inside space-y-1 text-slate-300 text-xs pt-1">
-                        <li><strong>Alice:</strong> Detector <strong>T</strong> (Transmitted, Bit 0) and Detector <strong>B</strong> (Reflected, Bit 1)</li>
-                        <li><strong>Bob:</strong> Detector <strong>A</strong> (Transmitted, Bit 0) and Detector <strong>C</strong> (Reflected, Bit 1)</li>
-                    </ul>
-                `,
-                instruction: "Click 'Emit 1 Entangled Pair' on the top optical bench to see two photons leave the central BBO crystal and travel toward Alice (left) and Bob (right).",
+                targetId: "benchCanvas",
+                category: "SPDC Quantum Source",
+                title: "1. The Entangled Source",
+                desc: "A 405 nm pump laser pumps crossed BBO crystals via SPDC, emitting twin 810 nm photons in Bell state |ψ⁺⟩ = (|HH⟩+|VV⟩)/√2.",
+                mission: "Click the action button below to emit an entangled pair and watch photons travel to Alice (left) and Bob (right) detectors.",
                 actionBtnText: "✨ Emit 1 Entangled Pair",
                 action: () => emitSinglePair()
             },
             {
                 number: 2,
-                title: "Alice Sets Her Secret Message",
-                subtitle: "Encoding: Translating Characters into Binary Bits",
-                getExplanation: () => {
-                    const currentText = document.getElementById('aliceMsgText')?.value || "photon";
-                    const mode = document.getElementById('encodingSelect')?.value || '5bit';
-                    const bits = textToBits(currentText, mode);
-                    const msgLen = bits.length;
-                    const recPairs = Math.max(20, Math.ceil((msgLen * 2.5) / 5) * 5);
-                    return `
-                        <p>Alice chooses a secret word to send to Bob. Each character is converted into binary bits (${mode === '5bit' ? '5-bit alphabet: a=1, b=2... z=26' : '8-bit ASCII'}).</p>
-                        
-                        <div class="bg-slate-950/90 p-3 rounded-xl border border-slate-800 space-y-2 my-2">
-                            <label class="block text-slate-300 font-bold text-xs">Edit Alice's Secret Message Here:</label>
-                            <div class="flex items-center space-x-2">
-                                <input type="text" id="guideAliceMsgInput" value="${currentText}" oninput="syncFromGuideMsg(this.value)" class="bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white font-mono w-full focus:outline-none focus:border-blue-500" placeholder="Type a message (e.g. photon)">
-                                <button class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-mono text-slate-300 border border-slate-700 shrink-0" onclick="syncFromGuideMsg('photon')">Reset 'photon'</button>
-                            </div>
-                            <div class="font-mono text-blue-300 text-[11px] break-all bg-slate-900/90 p-2 rounded border border-slate-800/80">
-                                Binary: <span id="guideBinaryBits">${bits ? (bits.match(/.{1,5}/g)?.join(' ') || bits) : '(empty)'}</span>
-                            </div>
-                        </div>
-
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 my-2 text-xs">
-                            <div class="p-2.5 rounded-lg bg-blue-950/40 border border-blue-800/60">
-                                <span class="text-blue-300 font-bold block mb-0.5">🔒 Required Key Length:</span>
-                                <span id="guideReqKeyLen" class="text-white text-sm font-bold font-mono">${msgLen} bits</span>
-                                <p class="text-[10px] text-slate-400 mt-1"><strong>One-Time Pad Rule:</strong> Secret Key length must be &ge; Message length for Shannon's perfect secrecy.</p>
-                            </div>
-                            <div class="p-2.5 rounded-lg bg-cyan-950/40 border border-cyan-800/60">
-                                <span class="text-cyan-300 font-bold block mb-0.5">🎲 Recommended Measurements:</span>
-                                <span id="guideRecSimCount" class="text-white text-sm font-bold font-mono">${recPairs} pairs</span>
-                                <p class="text-[10px] text-slate-400 mt-1">Because ~50% of pairs have mismatched bases (discarded during sifting), you need ~2.5× pairs.</p>
-                            </div>
-                        </div>
-                    `;
-                },
-                instruction: "Edit the secret word above or in Alice's panel below. Notice how the length of the secret message dictates how long the key must be!",
-                actionBtnText: "Next: Choose Measurement Bases →",
-                action: () => jumpToStep(3)
+                targetId: "aliceMsgText",
+                category: "Message Encoding",
+                title: "2. Alice's Secret Message",
+                desc: "Characters are translated to binary (e.g. 'photon' = 30 bits). One-Time Pad rule: Key length must be ≥ Message length.",
+                mission: "Type any secret message or keep 'photon'. The required key length updates automatically.",
+                actionBtnText: "📝 Reset to 'photon'",
+                action: () => {
+                    const el = document.getElementById('aliceMsgText');
+                    if (el) { el.value = 'photon'; updateMessageBits(); }
+                }
             },
             {
                 number: 3,
-                title: "Random Basis Selection by Alice and Bob",
-                subtitle: "Why We Use Two Polarization Bases: 0|90 vs -45|45",
-                getExplanation: () => {
-                    const recPairs = getRecommendedBatchCount();
-                    return `
-                        <p>Alice and Bob each select one of two measurement bases randomly for every measurement (${recPairs} recommended in this case) (e.g. by throwing dice):</p>
-                        <ul class="list-disc list-inside space-y-1 text-slate-300 text-xs pt-1">
-                            <li><strong>0|90 [F1]:</strong> Half-wave plate set to 0°. Detectors measure 0° (Bit 0) and 90° (Bit 1).</li>
-                            <li><strong>-45|45 [F2]:</strong> Half-wave plate rotated to 22.5°. Detectors measure -45° (Bit 0) and 45° (Bit 1).</li>
-                        </ul>
-                        <p>Because basis choices are made independently and randomly, Alice and Bob will choose the <em>same basis ~50% of the time</em> and <em>different bases ~50% of the time</em>.</p>
-                    `;
-                },
-                instruction: "Click F1 or F2 on Alice's side, then yield control (F12) to Bob and click F1 or F2 to simulate a manual basis choice.",
-                actionBtnText: "🎲 Set Random Bases for Both",
+                targetId: "aliceF1",
+                category: "Measurement Bases",
+                title: "3. Independent Bases (HWP)",
+                desc: "Alice and Bob rotate Half-Wave Plates to independently choose 0°|90° (HV, F1) or -45°|45° (Diagonal, F2).",
+                mission: "Press F1 or F2 on each side, or leave random basis selection enabled.",
+                actionBtnText: "🎲 Randomize Both Bases",
                 action: () => {
                     const bases = ['0|90', '-45|45'];
-                    const aB = bases[Math.floor(Math.random() * 2)];
-                    const bB = bases[Math.floor(Math.random() * 2)];
-                    handleBasisChoice('alice', aB);
-                    handleBasisChoice('bob', bB);
+                    handleBasisChoice('alice', bases[Math.floor(Math.random() * 2)]);
+                    handleBasisChoice('bob', bases[Math.floor(Math.random() * 2)]);
                 }
             },
             {
                 number: 4,
-                title: "Measuring Photon Pairs in Coincidence",
-                subtitle: "Step 7 / Figure 246: Collecting Sufficient Raw Pairs",
-                getExplanation: () => {
-                    const currentText = document.getElementById('aliceMsgText')?.value || "photon";
-                    const mode = document.getElementById('encodingSelect')?.value || '5bit';
-                    const bits = textToBits(currentText, mode);
-                    const msgLen = bits.length;
-                    const recPairs = getRecommendedBatchCount();
-                    return `
-                        <p>Because only ~50% of the measurements have matching bases, Alice and Bob must measure roughly <strong>2.5× the required key length</strong> in photon pairs.</p>
-                        <div class="p-2.5 bg-slate-950 rounded-lg border border-slate-800 my-2 space-y-1.5 text-xs">
-                            <div class="flex justify-between items-center">
-                                <span class="text-slate-400">Secret Message Length:</span>
-                                <span class="text-white font-mono font-bold">${msgLen} bits</span>
-                            </div>
-                            <div class="flex justify-between items-center">
-                                <span class="text-cyan-300 font-bold">Required Sifted Key Length:</span>
-                                <span class="text-cyan-300 font-mono font-bold">${msgLen} bits</span>
-                            </div>
-                            <div class="flex justify-between items-center border-t border-slate-800 pt-1.5">
-                                <span class="text-emerald-400 font-bold">Recommended Photon measurements:</span>
-                                <span class="text-emerald-400 font-mono font-bold text-sm">${recPairs} pairs</span>
-                            </div>
-                        </div>
-                        <p class="text-[11px] text-slate-400">Before filtering, the measurement results on the scatter plots look completely random and uncorrelated because many pairs were measured in mismatched bases.</p>
-                    `;
-                },
-                getInstruction: () => {
-                    const rec = getRecommendedBatchCount();
-                    return `Click the button below to auto-simulate ${rec} photon pairs (adjusted for your message length), or enter a custom amount manually.`;
-                },
-                getActionBtnText: () => {
-                    const rec = getRecommendedBatchCount();
-                    return `🎲 Auto-Simulate ${rec} Pairs`;
-                },
-                action: () => runBatchSimulation(getRecommendedBatchCount())
+                targetId: "emitSingleBtn",
+                category: "Coincidence Measurement",
+                title: "4. Measuring Photon Pairs",
+                desc: "Photons split at PBS cubes into 4 detectors (T/B for Alice, A/C for Bob). A coincidence registers when both arms click together.",
+                mission: "Simulate a batch of photon pairs (~75 pairs) to collect sufficient data to build a shared key.",
+                actionBtnText: "🎲 Measure 75 Pairs Batch",
+                action: () => runBatchSimulation(75)
             },
             {
                 number: 5,
-                title: "Public Basis Reconciliation (Sifting)",
-                subtitle: "Step 8 / Figure 247: Discarding Mismatched Bases",
-                explanation: `
-                    <p>Alice and Bob now communicate over a <strong>public classical channel</strong> (e.g., phone, internet, or radio) to compare <em>which basis</em> they used for each pair:</p>
-                    <div class="p-2 bg-slate-950 rounded border border-slate-800 text-xs text-slate-300 my-2">
-                        • <strong>Different Bases:</strong> Result is discarded (outcome was purely 50/50 random quantum noise).<br>
-                        • <strong>Same Basis:</strong> Result is kept! Alice and Bob know their photons yielded correlated results!
-                    </div>
-                    <p><strong class="text-amber-400">Crucial Security Rule:</strong> Alice and Bob only publish which <em>basis</em> they used, NEVER the detector measurement outcome! Eve learns nothing about the actual bit values.</p>
-                `,
-                instruction: "Press [F3] or click 'Filter by Bases'. Watch the scatter plot instantly filter to reveal strong quantum correlations!",
+                targetId: "aliceF3",
+                category: "Public Sifting",
+                title: "5. Basis Reconciliation [F3]",
+                desc: "Alice and Bob compare which basis they used over a public channel. Pairs with mismatched bases (~50%) are discarded without revealing bit values.",
+                mission: "Press F3 or click 'Filter by Bases'. Watch the scatter plot instantly reveal correlated matching points!",
                 actionBtnText: "🔍 Filter by Bases [F3]",
                 action: () => filterByBases()
             },
             {
                 number: 6,
-                title: "Calculating the Shared Key & Detecting Bit Flips",
-                subtitle: "Step 10 / Figure 248: Binary Key Extraction & Physical ~5% Noise",
-                explanation: `
-                    <p>By pressing [F4], Alice and Bob convert their kept measurements into binary keys:</p>
-                    <ul class="list-disc list-inside space-y-1 text-slate-300 text-xs pt-1">
-                        <li>Polarization <strong>0°</strong> (Det T/A) or <strong>-45°</strong> (Det T/A) &rarr; <span class="text-blue-400 font-bold">Bit 0</span></li>
-                        <li>Polarization <strong>90°</strong> (Det B/C) or <strong>45°</strong> (Det B/C) &rarr; <span class="text-rose-400 font-bold">Bit 1</span></li>
-                    </ul>
-                    <p>In an ideal quantum universe, both keys would be 100% identical. However, in the real Thorlabs kit, there is an expected <strong>~5% bit-flip error rate</strong> due to finite PBS extinction and crystal alignment. Notice the highlighted bit-flips (like data point 10 in the manual)!</p>
-                `,
-                instruction: "Press [F4] or click 'Calculate Key' on Alice's side, then on Bob's side, to generate the sifted keys.",
+                targetId: "aliceKeyDisplay",
+                category: "Key Extraction",
+                title: "6. Shared Key & Physical Errors [F4]",
+                desc: "Correlated events are extracted into binary keys. Real Thorlabs optics exhibit ~5% bit-flip noise (highlighted in yellow).",
+                mission: "Press F4 or click 'Calculate Key' on Alice and Bob windows to extract the sifted keys.",
                 actionBtnText: "🔑 Calculate Keys [F4]",
                 action: () => {
                     calculateKey('alice');
@@ -1025,33 +931,22 @@
             },
             {
                 number: 7,
-                title: "One-Time Pad Encryption (Bitwise XOR)",
-                subtitle: "Step 11 / Figure 249: Information-Theoretic Security",
-                explanation: `
-                    <p>Alice encrypts her message bits (M) with her secret key bits (K) using bitwise <strong>exclusive-OR (XOR, &oplus;)</strong>:</p>
-                    <div class="p-2 bg-slate-950 rounded border border-slate-800 font-mono text-indigo-300 text-center my-2 text-xs">
-                        Ciphertext = Message &oplus; Key &nbsp;&nbsp;(0&oplus;0=0, 1&oplus;1=0, 1&oplus;0=1, 0&oplus;1=1)
-                    </div>
-                    <p>Because the key is truly random and only used once (Vernam cipher / One-Time Pad), the ciphertext is provably unbreakable, even by an adversary with infinite computing power!</p>
-                `,
-                instruction: "Press [F5] or click 'Encrypt Msg' on Alice's window to scramble the message.",
+                targetId: "aliceF5",
+                category: "One-Time Pad",
+                title: "7. Vernam XOR Encryption [F5]",
+                desc: "Alice encrypts her message bits by bitwise XOR with her secret key (Ciphertext = Msg ⊕ Key). Provably unbreakable.",
+                mission: "Press F5 or click 'Encrypt Msg' to scramble plaintext into ciphertext.",
                 actionBtnText: "🔒 Encrypt Message [F5]",
                 action: () => toggleEncryptMessage('alice')
             },
             {
                 number: 8,
-                title: "Public Transmission & Decryption",
-                subtitle: "Steps 12 & 13 / Figure 250: Restoring the Message with Bob's Key",
-                explanation: `
-                    <p>Alice sends the scrambled ciphertext to Bob over the public channel [F6]. Anyone intercepting the public channel can see this ciphertext, but without Bob's secret quantum key, it is mathematically meaningless noise.</p>
-                    <p>Bob applies his key with the exact same bitwise XOR operation [F7]:</p>
-                    <div class="p-2 bg-slate-950 rounded border border-slate-800 font-mono text-emerald-300 text-center my-2 text-xs">
-                        Decrypted = Ciphertext &oplus; BobKey = (Message &oplus; AliceKey) &oplus; BobKey
-                    </div>
-                    <p>If Alice's and Bob's keys match, <code>"photon"</code> is perfectly restored! If an experimental bit-flip occurred (e.g. at bit #10), you will see <code>"phpton"</code>, exactly as illustrated in Figure 250 of the Thorlabs manual!</p>
-                `,
-                instruction: "Click 'Send Message' [F6] from Alice, then click 'Decrypt Msg' [F7] on Bob's window to complete the full QKD protocol!",
-                actionBtnText: "📨 Send & Decrypt Message [F6 & F7]",
+                targetId: "bobRecvText",
+                category: "Decryption",
+                title: "8. Public Transmission & Decryption [F6/F7]",
+                desc: "Alice sends ciphertext over the public channel [F6]. Bob applies XOR with his key [F7] to restore the original plaintext!",
+                mission: "Transmit the ciphertext and decrypt on Bob's window to complete the full E91 QKD protocol.",
+                actionBtnText: "📨 Send & Decrypt [F6 & F7]",
                 action: () => {
                     sendMessage('alice');
                     setTimeout(() => decryptMessage('bob'), 300);
@@ -1059,96 +954,127 @@
             }
         ];
 
-        function renderStep() {
-            const step = stepsData[currentStep - 1];
-            document.getElementById('stepNum').innerText = step.number;
+        function toggleInteractiveGuide() {
+            if (useRealHardware) return;
+            if (tourActive) closeInteractiveGuide();
+            else startInteractiveGuide();
+        }
+
+        function startInteractiveGuide() {
+            if (useRealHardware) return;
+            tourActive = true;
+            const overlay = document.getElementById('tutorialOverlay');
+            if (overlay) overlay.classList.remove('hidden');
+            renderTourStep(currentTourStep);
+        }
+
+        function closeInteractiveGuide() {
+            tourActive = false;
+            const overlay = document.getElementById('tutorialOverlay');
+            if (overlay) overlay.classList.add('hidden');
+        }
+
+        function renderTourStep(stepNum) {
+            currentTourStep = Math.max(1, Math.min(tourSteps.length, stepNum));
+            const step = tourSteps[currentTourStep - 1];
+
+            document.getElementById('tourStepBadge').innerText = `Step ${step.number} / ${tourSteps.length}`;
+            document.getElementById('tourCategory').innerText = step.category;
+            document.getElementById('tourTitle').innerText = step.title;
+            document.getElementById('tourDescription').innerText = step.desc;
+            document.getElementById('tourMission').innerText = step.mission;
+            document.getElementById('tourActionBtn').innerHTML = `<span>${step.actionBtnText}</span>`;
+
+            document.getElementById('tourPrevBtn').disabled = (currentTourStep === 1);
+            document.getElementById('tourNextBtn').disabled = (currentTourStep === tourSteps.length);
+
+            const dotsContainer = document.getElementById('tourDots');
+            if (dotsContainer) {
+                dotsContainer.innerHTML = '';
+                for (let i = 1; i <= tourSteps.length; i++) {
+                    const dot = document.createElement('button');
+                    dot.className = `h-2 rounded-full transition-all ${i === currentTourStep ? 'bg-cyan-400 w-4' : 'bg-slate-700 hover:bg-slate-500 w-2'}`;
+                    dot.title = `Jump to Step ${i}`;
+                    dot.onclick = () => renderTourStep(i);
+                    dotsContainer.appendChild(dot);
+                }
+            }
+
+            const targetEl = document.getElementById(step.targetId);
+            if (targetEl) {
+                targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                setTimeout(() => positionTourHud(targetEl), 150);
+            }
+        }
+
+        function positionTourHud(targetEl) {
+            const spotlight = document.getElementById('tutorialSpotlight');
+            const hud = document.getElementById('tutorialHud');
+            if (!targetEl || !spotlight || !hud) return;
+
+            const rect = targetEl.getBoundingClientRect();
+            const pad = 6;
             
-            // Update pills
-            for (let i = 1; i <= 8; i++) {
-                const pill = document.getElementById(`stepPill${i}`);
-                pill.className = "py-1 px-1 rounded border text-center transition-all " +
-                    (i === currentStep ? "step-active" : (i < currentStep ? "step-complete" : "border-slate-800 text-slate-500"));
+            spotlight.style.top = `${Math.max(0, rect.top - pad)}px`;
+            spotlight.style.left = `${Math.max(0, rect.left - pad)}px`;
+            spotlight.style.width = `${rect.width + pad * 2}px`;
+            spotlight.style.height = `${rect.height + pad * 2}px`;
+
+            const hudWidth = hud.offsetWidth || 380;
+            const hudHeight = hud.offsetHeight || 260;
+            const vpWidth = window.innerWidth;
+            const vpHeight = window.innerHeight;
+
+            let hudTop;
+            if (rect.bottom + hudHeight + 20 < vpHeight) {
+                hudTop = rect.bottom + 12;
+            } else if (rect.top - hudHeight - 20 > 0) {
+                hudTop = rect.top - hudHeight - 12;
+            } else {
+                hudTop = Math.max(20, (vpHeight - hudHeight) / 2);
             }
 
-            document.getElementById('prevStepBtn').disabled = (currentStep === 1);
-            document.getElementById('nextStepBtn').disabled = (currentStep === 8);
+            let hudLeft = rect.left + (rect.width / 2) - (hudWidth / 2);
+            hudLeft = Math.max(16, Math.min(vpWidth - hudWidth - 16, hudLeft));
 
-            const explanationHtml = typeof step.getExplanation === 'function' ? step.getExplanation() : step.explanation;
-            const instructionText = typeof step.getInstruction === 'function' ? step.getInstruction() : step.instruction;
-            const actionText = typeof step.getActionBtnText === 'function' ? step.getActionBtnText() : step.actionBtnText;
-
-            const card = document.getElementById('stepCard');
-            card.innerHTML = `
-                <div>
-                    <span class="text-xs font-mono font-bold text-blue-400 block">${step.subtitle}</span>
-                    <h4 class="text-base font-black text-white mt-0.5">${step.title}</h4>
-                </div>
-                <div class="text-slate-300 text-xs leading-relaxed space-y-2">
-                    ${explanationHtml}
-                </div>
-                <div class="p-2.5 rounded-lg bg-blue-950/40 border border-blue-800/50 flex items-start space-x-2 text-xs">
-                    <span class="text-blue-400 font-bold shrink-0">💡 What to do:</span>
-                    <span class="text-blue-200">${instructionText}</span>
-                </div>
-            `;
-
-            document.getElementById('stepActionBtn').innerHTML = `<span>⚡ ${actionText}</span>`;
+            hud.style.top = `${hudTop}px`;
+            hud.style.left = `${hudLeft}px`;
         }
 
-        // Live bidirectional message sync between Learning Guide & Alice panel
-        function syncFromGuideMsg(val) {
-            const aliceInput = document.getElementById('aliceMsgText');
-            if (aliceInput) {
-                aliceInput.value = val;
-                updateMessageBits();
-            }
-            const guideInput = document.getElementById('guideAliceMsgInput');
-            if (guideInput && guideInput.value !== val) {
-                guideInput.value = val;
-            }
-            const mode = document.getElementById('encodingSelect')?.value || '5bit';
-            const bits = textToBits(val, mode);
-            const msgLen = bits.length;
-            const recPairs = Math.max(20, Math.ceil((msgLen * 2.5) / 5) * 5);
-
-            const guideBitsEl = document.getElementById('guideBinaryBits');
-            if (guideBitsEl) guideBitsEl.innerText = bits ? (bits.match(/.{1,5}/g)?.join(' ') || bits) : '(empty)';
-            const guideReqKey = document.getElementById('guideReqKeyLen');
-            if (guideReqKey) guideReqKey.innerText = `${msgLen} bits`;
-            const guideRecSim = document.getElementById('guideRecSimCount');
-            if (guideRecSim) guideRecSim.innerText = `${recPairs} pairs`;
+        function nextTourStep() {
+            if (currentTourStep < tourSteps.length) renderTourStep(currentTourStep + 1);
         }
 
-        function nextStep() {
-            if (currentStep < stepsData.length) {
-                currentStep++;
-                renderStep();
-            }
+        function prevTourStep() {
+            if (currentTourStep > 1) renderTourStep(currentTourStep - 1);
         }
 
-        function prevStep() {
-            if (currentStep > 1) {
-                currentStep--;
-                renderStep();
-            }
-        }
-
-        function jumpToStep(num) {
-            currentStep = num;
-            renderStep();
-        }
-
-        function executeCurrentStepAction() {
-            const step = stepsData[currentStep - 1];
+        function executeTourAction() {
+            const step = tourSteps[currentTourStep - 1];
             if (step && typeof step.action === 'function') {
                 step.action();
+                const btn = document.getElementById('tourActionBtn');
+                if (btn) {
+                    btn.classList.add('scale-95');
+                    setTimeout(() => btn.classList.remove('scale-95'), 150);
+                }
             }
         }
 
-        function toggleGuide() {
-            const g = document.getElementById('guideSection');
-            g.classList.toggle('hidden');
-        }
+        window.addEventListener('resize', () => {
+            if (tourActive) {
+                const step = tourSteps[currentTourStep - 1];
+                const el = document.getElementById(step.targetId);
+                if (el) positionTourHud(el);
+            }
+        });
+        window.addEventListener('scroll', () => {
+            if (tourActive) {
+                const step = tourSteps[currentTourStep - 1];
+                const el = document.getElementById(step.targetId);
+                if (el) positionTourHud(el);
+            }
+        }, { passive: true });
 
 
         // =====================================================================
@@ -2774,6 +2700,12 @@
                 if (hwBtn) hwBtn.className = "px-2.5 py-1 rounded-l bg-emerald-600 text-white font-bold flex items-center space-x-1 transition-all shadow";
                 if (hwSec) hwSec.classList.remove('hidden');
                 updateHwPanelCogState(true);
+
+                // Learning guide is ONLY an option in simulation
+                const guideBtn = document.getElementById('toggleGuideBtn');
+                if (guideBtn) guideBtn.classList.add('hidden');
+                closeInteractiveGuide();
+
                 if (simBench) simBench.classList.add('hidden');
                 if (speedWrap) speedWrap.classList.add('hidden'); // Disable animation speed slider in hardware mode
                 if (hwBanner) {
@@ -2808,6 +2740,11 @@
                 if (hwBtn) hwBtn.className = "px-2.5 py-1 rounded-l text-slate-400 hover:text-white font-bold flex items-center space-x-1 transition-all";
                 if (hwSec) hwSec.classList.add('hidden');
                 updateHwPanelCogState(false);
+
+                // Restore learning guide button in simulation mode
+                const guideBtn = document.getElementById('toggleGuideBtn');
+                if (guideBtn) guideBtn.classList.remove('hidden');
+
                 if (simBench) simBench.classList.remove('hidden');
                 if (speedWrap) speedWrap.classList.remove('hidden');
                 if (hwBanner) {
@@ -3875,6 +3812,11 @@
         // Global F-Key Hotkeys
         window.addEventListener('keydown', (e) => {
             const targetUser = activeTurn;
+            if (e.key === 'Escape' && tourActive) {
+                e.preventDefault();
+                closeInteractiveGuide();
+                return;
+            }
             switch(e.key) {
                 case ' ':
                     if (e.target.tagName !== 'INPUT') {
@@ -3930,7 +3872,6 @@
             initCharts();
             updateMessageBits();
             refreshCoincidenceMatrix();
-            renderStep();
             setTurn('alice');
             scanThorlabsHardware();
 

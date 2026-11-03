@@ -1,70 +1,68 @@
-# Thorlabs EDU-QOP1(/M) & EDU-QOPA1(/M) — Experiment 25.4 E91 Simulator
+# Thorlabs EDU-QOP1 & EDU-QOPA1 — E91 QKD Simulator
 
-An interactive, educational quantum optics learning environment for **Artur Ekert's 1991 Bell-inequality-based Quantum Key Distribution (E91) protocol**, specifically modeling the **Thorlabs "EDU-QOP1(/M) and EDU-QOPA1(/M) Quantum Optics Kit and Polarization-Entanglement Extension Kit" Experiment 25.4** and **Section 26.2 (E91 QKD Tab)**.
+An interactive quantum optics laboratory simulator and hardware interface for Artur Ekert's 1991 Bell-inequality Quantum Key Distribution (E91) protocol, modeled directly after **Thorlabs EDU-QOP1(/M) & EDU-QOPA1(/M)** Experiment 25.4.
 
 ---
 
-## Key Features
+## Features
 
-1. **Top-Down Animated Optical Bench (Figure 242)**:
-   - High-fidelity visual simulation of the physical optical breadboard.
-   - **Central SPDC Source**: 405 nm violet diode pump laser pumping crossed BBO crystals to produce paired 810 nm entangled photons in Bell state $|\psi^+\rangle = \frac{1}{\sqrt{2}}(|HH\rangle + |VV\rangle)$.
-   - **Alice's Arm (Left)**: Rotatable Half-Wave Plate (0° or 22.5°), Polarizing Beamsplitter (PBS), and Detectors **T** (Transmission, Bit 0) & **B** (Reflection, Bit 1).
-   - **Bob's Arm (Right)**: Rotatable Half-Wave Plate (0° or 22.5°), Polarizing Beamsplitter (PBS), and Detectors **A** (Transmission, Bit 0) & **C** (Reflection, Bit 1).
-   - **Real-Time Photon Dynamics**: Individual photon wavepackets with polarization direction vectors travel through the waveplates and split at the PBS cubes into the detectors.
-   - **Detector Click Sparks & Coincidence Tagger**: Visual pulse ripples and coincidence unit readout (e.g. `T&A`, `B&C`, `T&C`, `B&A`).
-   - Interactive components: Click directly on Alice's or Bob's HWP in the canvas to rotate them!
+1. **Top-Down Animated Optical Bench (Fig 242)**:
+   - SPDC Bell state source: 405 nm violet diode laser pumping crossed BBO crystals producing $|\psi^+\rangle = \frac{1}{\sqrt{2}}(|HH\rangle + |VV\rangle)$ at 810 nm.
+   - Alice (Left): Rotatable Half-Wave Plate ($0^\circ$ or $22.5^\circ$), PBS cube, Detectors T (Bit 0) & B (Bit 1).
+   - Bob (Right): Rotatable Half-Wave Plate ($0^\circ$ or $22.5^\circ$), PBS cube, Detectors A (Bit 0) & C (Bit 1).
+   - Real-time photon wavepacket dynamics, detector clicks, and coincidence tagging.
 
-2. **Interactive 8-Step Educational Learning Guide**:
-   - Step 1: The Quantum Source & Detectors (SPDC and Bell state physics).
-   - Step 2: Message Encoding (5-bit alphabet representation from Thorlabs manual Fig 248: "photon" = 30 bits).
-   - Step 3: Basis Selection (HWP at 0° [F1] vs 22.5° [F2]).
-   - Step 4: Coincidence Measurements (Simulating 75 pairs as in Fig 246).
-   - Step 5: Public Basis Reconciliation / Sifting [F3].
-   - Step 6: Extracting Key & Observing Physical ~5% Bit Flips (data point #10 in Fig 247).
-   - Step 7: One-Time Pad Encryption via Bitwise XOR [F5].
-   - Step 8: Public Channel Transmission & Decryption [F6 & F7] (reproducing "phpton" on bit flips as in Fig 250).
+2. **Game-Style Interactive Spotlight Tutorial (Simulation Only)**:
+   - Floating HUD walkthrough that points directly at optical bench elements and software controls with a glowing spotlight.
+   - Interactive action buttons per step (emit pair, randomize bases, measure 75 pairs, sift, extract key, encrypt, decrypt).
+   - Automatically hidden when connected to real hardware.
 
-3. **Thorlabs Dual Software Interface (Section 26.2)**:
-   - Replicates the official software windows with side-by-side or single-party view.
-   - Full keyboard hotkeys (`F1` to `F12`) with turn yielding (`F12`).
-   - Dual-screen pop-out support across multiple monitors using `BroadcastChannel`.
-   - Table 25.4.3 coincidence rate matrix monitoring.
+3. **Dual Software Interface (Section 26.2)**:
+   - Dual View, Alice View, Bob View, and Dual-Screen Pop-Out across multiple displays via `BroadcastChannel`.
+   - Full keyboard shortcuts (`F1` through `F12`, `Space` to emit, `Esc` to close tour).
+   - One-Time Pad Vernam bitwise XOR encryption and decryption.
 
-4. **Quantum Backend**:
-   - Powered by Qiskit AerSimulator and FastAPI.
+4. **Thorlabs Hardware Control (KLD101 & Swabian Time Tagger 20)**:
+   - Direct USB integration with Thorlabs KLD101 Laser Controller (405 nm pump diode) and Swabian Instruments Time Tagger 20.
+   - Live 4-channel count rate monitoring and coincidence detection.
+   - Automatic laser shutoff on mode switch and USB disconnect.
 
 ---
 
 ## Quickstart
 
-### 1. Install Dependencies
+### 1. Requirements
 ```bash
 pip install -r requirements.txt
 ```
 
-### 2. Run Test Suite
+### 2. Run Tests
 ```bash
 python -m pytest
 ```
 
-### 3. Start the Server
+### 3. Start Application
 ```bash
-python qiskit_api.py
+python server.py
+# or: python qiskit_api.py
 ```
 Open **[http://localhost:8000](http://localhost:8000)** in your browser.
 
 ---
 
-## Keyboard Hotkeys Reference (Section 26.2)
+## Hotkeys
 
-| Key | Action | Physical Meaning |
+| Key | Action | Physical Function |
 | :--- | :--- | :--- |
-| **F1** | `0°\|90°` (HV Basis) | Sets analyzer HWP to 0° |
-| **F2** | `-45°\|45°` (Diagonal Basis) | Sets analyzer HWP to 22.5° |
-| **F3** | `Filter by Bases` | Basis reconciliation (sifting) |
-| **F4** | `Calculate Key` | Key extraction from matching events |
-| **F5** | `Encrypt Msg` | Bitwise XOR ($\text{Message} \oplus \text{Key}$) |
-| **F6** | `Send Message` | Public channel transmission |
-| **F7** | `Decrypt Msg` | Bitwise XOR ($\text{Ciphertext} \oplus \text{BobKey}$) |
-| **F12** | `Yield Control` | Switches control focus between Alice and Bob |
+| **Space** | Emit Single Pair | Emits one entangled photon pair |
+| **F1** | `0°\|90°` (HV Basis) | Sets analyzer HWP to $0^\circ$ |
+| **F2** | `-45°\|45°` (Diagonal Basis) | Sets analyzer HWP to $22.5^\circ$ |
+| **F3** | Filter by Bases | Public channel basis reconciliation (sifting) |
+| **F4** | Calculate Key | Extracts key from matching events |
+| **F5** | Encrypt Msg | Bitwise XOR ($\text{Message} \oplus \text{Key}$) |
+| **F6** | Send Message | Transmits ciphertext over public channel |
+| **F7** | Decrypt Msg | Bitwise XOR ($\text{Ciphertext} \oplus \text{BobKey}$) |
+| **F9** | Clear Last | Removes last coincidence point |
+| **F10** | Clear All | Resets experiment state |
+| **F12** | Yield Control | Toggles control turn between Alice and Bob |
+| **Esc** | Close Guide | Dismisses interactive spotlight tour |

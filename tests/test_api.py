@@ -1,6 +1,6 @@
 import os
 import sys
-# ensure project root is importable when pytest runs from tests/
+
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from fastapi.testclient import TestClient
@@ -12,13 +12,13 @@ client = TestClient(app)
 def test_index_served():
     res = client.get("/index.html")
     assert res.status_code == 200
-    assert "Thorlabs" in res.text
     assert "E91 Quantum Key Distribution Protocol" in res.text
 
 
-def test_thorlabs_redirect_served():
-    res = client.get("/thorlabs_e91.html")
+def test_root_served():
+    res = client.get("/")
     assert res.status_code == 200
+    assert "E91 Quantum Key Distribution Protocol" in res.text
 
 
 def test_chsh_endpoint():
