@@ -866,6 +866,8 @@
         let aliceChart = null;
         let bobChart = null;
 
+        let currentRole = null; // 'alice', 'bob', or null (dual view)
+
         // BroadcastChannel for 2-screen popout support
         let broadcast = null;
         try {
@@ -2970,12 +2972,15 @@
                     const bB = bobChosenBasis;
                     aliceChosenBasis = null;
                     bobChosenBasis = null;
-                    await triggerSingleMeasurement(aB, bB);
                     updateBasisButtonUI('alice', null);
                     updateBasisButtonUI('bob', null);
+                    syncWithBroadcast();
+                    await triggerSingleMeasurement(aB, bB);
                     setTurn('alice');
+                    syncWithBroadcast();
                 } else {
                     setTurn('bob');
+                    syncWithBroadcast();
                 }
             } else if (user === 'bob') {
                 bobChosenBasis = basis;
@@ -2986,12 +2991,15 @@
                     const bB = bobChosenBasis;
                     aliceChosenBasis = null;
                     bobChosenBasis = null;
-                    await triggerSingleMeasurement(aB, bB);
                     updateBasisButtonUI('alice', null);
                     updateBasisButtonUI('bob', null);
+                    syncWithBroadcast();
+                    await triggerSingleMeasurement(aB, bB);
                     setTurn('alice');
+                    syncWithBroadcast();
                 } else {
                     setTurn('alice');
+                    syncWithBroadcast();
                 }
             }
         }
@@ -3231,7 +3239,7 @@
             }
         }
 
-        async function setHardwareMode(enabled) {
+        async function setHardwareMode(enabled, sync = true) {
             useRealHardware = !!enabled;
             const simBtn = document.getElementById('modeSimBtn');
             const hwBtn = document.getElementById('modeHwBtn');
@@ -3328,6 +3336,9 @@
                 updateHardwareStatusUI(data);
             } catch (e) {
                 console.error("Failed to switch hardware mode:", e);
+            }
+            if (sync) {
+                syncWithBroadcast();
             }
         }
 
@@ -4333,6 +4344,7 @@
 
         // View Mode Handlers
         function setViewMode(mode) {
+            currentRole = (mode === 'alice') ? 'alice' : ((mode === 'bob') ? 'bob' : null);
             const aliceWin = document.getElementById('aliceWindow');
             const bobWin = document.getElementById('bobWindow');
             const benchSec = document.getElementById('benchSection');
@@ -4373,6 +4385,7 @@
         function openPopoutBob() {
             window.open('index.html?role=bob', 'BobWindow', 'width=900,height=850');
             setViewMode('alice');
+            syncWithBroadcast();
         }
 
         function syncWithBroadcast() {
@@ -4381,25 +4394,96 @@
                 type: 'SYNC_STATE',
                 events: events,
                 activeTurn: activeTurn,
+                aliceChosenBasis: aliceChosenBasis,
+                bobChosenBasis: bobChosenBasis,
                 isFiltered: isFiltered,
                 aliceKey: aliceKey,
                 bobKey: bobKey,
-                receivedByBob: receivedByBob
+                aliceEncrypted: aliceEncrypted,
+                bobEncrypted: bobEncrypted,
+                aliceCiphertext: aliceCiphertext,
+                bobCiphertext: bobCiphertext,
+                receivedByBob: receivedByBob,
+                receivedByAlice: receivedByAlice,
+                useRealHardware: useRealHardware
             });
         }
 
         function handleBroadcastMessage(data) {
+            if (!data) return;
+            if (data.type === 'REQUEST_STATE') {
+                syncWithBroadcast();
+                return;
+            }
             if (data.type === 'SYNC_STATE') {
-                events = data.events;
-                isFiltered = data.isFiltered;
-                aliceKey = data.aliceKey;
-                bobKey = data.bobKey;
-                receivedByBob = data.receivedByBob;
-                setTurn(data.activeTurn);
+                events = data.events || [];
+                isFiltered = !!data.isFiltered;
+                aliceKey = data.aliceKey || "";
+                bobKey = data.bobKey || "";
+                aliceEncrypted = !!data.aliceEncrypted;
+                bobEncrypted = !!data.bobEncrypted;
+                aliceCiphertext = data.aliceCiphertext || "";
+                bobCiphertext = data.bobCiphertext || "";
+                receivedByBob = data.receivedByBob || null;
+                receivedByAlice = data.receivedByAlice || null;
+                aliceChosenBasis = (data.aliceChosenBasis !== undefined) ? data.aliceChosenBasis : aliceChosenBasis;
+                bobChosenBasis = (data.bobChosenBasis !== undefined) ? data.bobChosenBasis : bobChosenBasis;
+
+                if (data.useRealHardware !== undefined && data.useRealHardware !== useRealHardware) {
+                    setHardwareMode(data.useRealHardware, false);
+                }
+
+                updateBasisButtonUI('alice', aliceChosenBasis);
+                updateBasisButtonUI('bob', bobChosenBasis);
+                if (BENCH.alice?.hwp) {
+                    BENCH.alice.hwp.angle = (aliceChosenBasis === '0|90') ? 0 : (aliceChosenBasis === '-45|45' ? 22.5 : BENCH.alice.hwp.angle);
+                }
+                if (BENCH.bob?.hwp) {
+                    BENCH.bob.hwp.angle = (bobChosenBasis === '0|90') ? 0 : (bobChosenBasis === '-45|45' ? 22.5 : BENCH.bob.hwp.angle);
+                }
+
+                if (data.activeTurn) {
+                    setTurn(data.activeTurn, true);
+                }
                 updateCharts();
                 updateStats();
                 renderKeyDisplay('alice', aliceKey, bobKey);
                 renderKeyDisplay('bob', bobKey, aliceKey);
+
+                // Update encrypted & received text displays
+                const aEncLabel = document.getElementById('aliceEncryptLabel');
+                if (aEncLabel) aEncLabel.innerText = aliceEncrypted ? "Encrypted ✓" : "Encrypt Msg";
+                const bEncLabel = document.getElementById('bobEncryptLabel');
+                if (bEncLabel) bEncLabel.innerText = bobEncrypted ? "Encrypted ✓" : "Encrypt Msg";
+
+                const aEncText = document.getElementById('aliceEncryptedText');
+                const aEncBits = document.getElementById('aliceEncryptedBits');
+                if (aEncText) aEncText.innerText = aliceEncrypted ? (aliceCiphertext || "[Cipher]") : "-";
+                if (aEncBits) aEncBits.innerText = aliceEncrypted ? aliceCiphertext : "-";
+
+                const bEncText = document.getElementById('bobEncryptedText');
+                const bEncBits = document.getElementById('bobEncryptedBits');
+                if (bEncText) bEncText.innerText = bobEncrypted ? (bobCiphertext || "[Cipher]") : "-";
+                if (bEncBits) bEncBits.innerText = bobEncrypted ? bobCiphertext : "-";
+
+                if (receivedByBob) {
+                    const textPreview = bitsToText(receivedByBob.bits, receivedByBob.mode);
+                    const elBits = document.getElementById('bobRecvBits');
+                    const elLen = document.getElementById('bobRecvLen');
+                    const elText = document.getElementById('bobRecvText');
+                    if (elBits) elBits.innerText = receivedByBob.bits;
+                    if (elLen) elLen.innerText = receivedByBob.bits.length;
+                    if (elText) elText.innerText = receivedByBob.isEncrypted ? `[Encrypted: ${textPreview}]` : textPreview;
+                }
+                if (receivedByAlice) {
+                    const textPreview = bitsToText(receivedByAlice.bits, receivedByAlice.mode);
+                    const elBits = document.getElementById('aliceRecvBits');
+                    const elLen = document.getElementById('aliceRecvLen');
+                    const elText = document.getElementById('aliceRecvText');
+                    if (elBits) elBits.innerText = receivedByAlice.bits;
+                    if (elLen) elLen.innerText = receivedByAlice.bits.length;
+                    if (elText) elText.innerText = receivedByAlice.isEncrypted ? `[Encrypted: ${textPreview}]` : textPreview;
+                }
             }
         }
 
@@ -4439,7 +4523,7 @@
 
         // Global F-Key Hotkeys
         window.addEventListener('keydown', (e) => {
-            const targetUser = activeTurn;
+            const targetUser = currentRole || activeTurn;
             if (e.key === 'Escape' && tourActive) {
                 e.preventDefault();
                 closeInteractiveGuide();
@@ -4518,8 +4602,20 @@
 
             // Handle role URL parameter
             const params = new URLSearchParams(window.location.search);
-            if (params.get('role') === 'bob') setViewMode('bob');
-            else if (params.get('role') === 'alice') setViewMode('alice');
+            if (params.get('role') === 'bob') {
+                setViewMode('bob');
+                if (broadcast) {
+                    broadcast.postMessage({ type: 'REQUEST_STATE' });
+                    setTimeout(() => broadcast && broadcast.postMessage({ type: 'REQUEST_STATE' }), 200);
+                    setTimeout(() => broadcast && broadcast.postMessage({ type: 'REQUEST_STATE' }), 600);
+                }
+            } else if (params.get('role') === 'alice') {
+                setViewMode('alice');
+                if (broadcast) {
+                    broadcast.postMessage({ type: 'REQUEST_STATE' });
+                    setTimeout(() => broadcast && broadcast.postMessage({ type: 'REQUEST_STATE' }), 200);
+                }
+            }
         };
     </script>
 </body>
