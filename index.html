@@ -4104,6 +4104,9 @@
         }
 
         function playTurnDing() {
+            // Only play sound from Alice / main window, never from Bob pop-out window
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('role') === 'bob' || currentRole === 'bob') return;
             if (!isTurnSoundEnabled()) return;
             try {
                 const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
@@ -4523,7 +4526,8 @@
 
         // Global F-Key Hotkeys
         window.addEventListener('keydown', (e) => {
-            const targetUser = currentRole || activeTurn;
+            // Always consider keypress to be from whoever's turn it is
+            const targetUser = activeTurn;
             if (e.key === 'Escape' && tourActive) {
                 e.preventDefault();
                 closeInteractiveGuide();
