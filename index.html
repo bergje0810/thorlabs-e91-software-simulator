@@ -393,11 +393,12 @@
         </section>
 
 
-        <!-- Game-Style Interactive Tutorial Tour (Dual Spotlights on document + Floating HUD on viewport) -->
-        <div id="tutorialSpotlight" class="absolute pointer-events-none rounded-xl border-2 border-cyan-400 shadow-[0_0_25px_rgba(34,211,238,0.7),inset_0_0_15px_rgba(34,211,238,0.2)] ring-4 ring-cyan-500/20 z-40 hidden" style="transition: none !important;"></div>
-        <div id="tutorialSpotlight2" class="absolute pointer-events-none rounded-xl border-2 border-rose-400 shadow-[0_0_25px_rgba(244,63,94,0.7),inset_0_0_15px_rgba(244,63,94,0.2)] ring-4 ring-rose-500/20 z-40 hidden" style="transition: none !important;"></div>
-
+        <!-- Game-Style Interactive Tutorial Tour (Fixed Viewport Spotlights + Floating HUD) -->
         <div id="tutorialOverlay" class="fixed inset-0 z-50 pointer-events-none hidden">
+            <!-- Fixed Spotlights tracking exact screen coordinates -->
+            <div id="tutorialSpotlight" class="fixed pointer-events-none rounded-xl border-2 border-cyan-400 shadow-[0_0_25px_rgba(34,211,238,0.7),inset_0_0_15px_rgba(34,211,238,0.2)] ring-4 ring-cyan-500/20 z-40 hidden" style="transition: none !important;"></div>
+            <div id="tutorialSpotlight2" class="fixed pointer-events-none rounded-xl border-2 border-rose-400 shadow-[0_0_25px_rgba(244,63,94,0.7),inset_0_0_15px_rgba(244,63,94,0.2)] ring-4 ring-rose-500/20 z-40 hidden" style="transition: none !important;"></div>
+
             <div id="tutorialHud" class="fixed pointer-events-auto w-[360px] sm:w-[420px] bg-slate-900/95 border-2 border-cyan-500/80 rounded-2xl p-4 shadow-[0_15px_40px_rgba(0,0,0,0.85),0_0_30px_rgba(6,182,212,0.35)] backdrop-blur-xl text-slate-100 flex flex-col space-y-3 z-50">
                 <div class="flex items-center justify-between border-b border-slate-800 pb-2">
                     <div class="flex items-center space-x-2">
@@ -414,7 +415,7 @@
                     <p class="text-xs text-slate-300 leading-relaxed mt-1" id="tourDescription">A 405 nm pump laser produces polarization-entangled pairs in Bell state |ψ⁺⟩.</p>
                 </div>
 
-                <div class="bg-cyan-950/30 border border-cyan-800/50 rounded-xl p-2.5 flex items-start space-x-2 text-xs">
+                <div id="tourActionCard" class="bg-cyan-950/30 border border-cyan-800/50 rounded-xl p-2.5 flex items-start space-x-2 text-xs">
                     <span class="text-cyan-400 text-sm">🎯</span>
                     <div class="flex-1">
                         <span class="font-bold text-cyan-300 block text-[11px] uppercase tracking-wide">Action:</span>
@@ -445,11 +446,22 @@
         <section class="space-y-4">
             <!-- Global Status Bar -->
             <div class="glass-panel p-3.5 rounded-xl flex flex-wrap items-center justify-between gap-3 text-xs">
-                <div class="flex items-center space-x-3">
-                    <span class="text-slate-400 font-bold uppercase">Software Turn:</span>
-                    <span id="turnIndicator" class="px-3 py-1 rounded-full text-xs font-black uppercase tracking-wide bg-blue-500/20 text-blue-400 border border-blue-500/40">
-                        Alice's Turn (Press F12 to Yield)
-                    </span>
+                <div class="flex flex-wrap items-center gap-3">
+                    <div class="flex items-center space-x-2">
+                        <span class="text-slate-400 font-bold uppercase">Software Turn:</span>
+                        <span id="turnIndicator" class="px-3 py-1 rounded-full text-xs font-black uppercase tracking-wide bg-blue-500/20 text-blue-400 border border-blue-500/40">
+                            Alice's Turn (Press F12 to Yield)
+                        </span>
+                    </div>
+                    <span class="text-slate-500 hidden sm:inline">|</span>
+                    <!-- Multi-Photon Pair Simulation (Restored in Software Turn bar) -->
+                    <div id="batchSimControl" class="flex items-center space-x-1.5 bg-slate-900/90 px-2.5 py-1 rounded-lg border border-slate-800 shadow-sm" title="Instantly simulate photon pairs without animation">
+                        <button id="batchSimBtn" type="button" class="px-2.5 py-0.5 rounded bg-blue-600 hover:bg-blue-500 text-white font-bold flex items-center space-x-1 transition-all shadow cursor-pointer" onclick="runBatchSimulation()">
+                            <span>🎲 Simulate</span>
+                        </button>
+                        <input type="number" id="batchCountInput" min="1" max="5000" step="5" value="75" class="w-14 bg-slate-950 border border-slate-700 rounded px-1.5 py-0.5 font-mono text-blue-300 text-center text-xs focus:outline-none focus:border-blue-500" oninput="handleBatchCountInput(this.value)" title="Adjust number of pairs to simulate (defaults to Rec. Measurements)">
+                        <span class="text-slate-400 text-[11px] font-mono">Pairs</span>
+                    </div>
                     <span class="text-slate-500 hidden sm:inline">|</span>
                     <span class="text-slate-400 hidden sm:inline">
                         Pairs Measured: <strong id="statTotalPairs" class="font-mono text-white">0</strong> |
@@ -1118,18 +1130,13 @@
                 category: "Measurement Graphs",
                 title: "2.1 Recording Raw Measurements on Graphs",
                 desc: "Look at the two charts: Alice sees only her own measurements (in blue), and Bob sees only his own measurements (in red). Over their separate private channels, neither station knows what basis or bit the other side measured.",
-                mission: "Observe each party's private measurement points. (No action required — click 'Next →' to proceed).",
-                actionBtnText: "✓ Next Enabled (Review Graphs)",
                 onEnter: () => {
                     const aToggle = document.getElementById('aliceShowAllToggle');
                     const bToggle = document.getElementById('bobShowAllToggle');
                     if (aToggle) aToggle.checked = false;
                     if (bToggle) bToggle.checked = false;
                     updateCharts();
-                    completeTourAction(); // Next button enabled immediately!
-                },
-                action: () => {
-                    completeTourAction();
+                    completeTourAction(); // Next button enabled immediately without requiring action!
                 }
             },
             {
@@ -1139,7 +1146,7 @@
                 category: "Measurement Graphs",
                 title: "2.2 Comparing Measurements (Show All Checkmark)",
                 desc: "Now click 'Show All Results' to inspect both parties' results together. Measurement #1 had matching bases and will be kept (green). Measurement #2 had differing bases (blue Alice, red Bob). Even if differing bases happened to produce the same bit by luck, they cannot ensure quantum secrecy and will be removed during sifting!",
-                mission: "Click 'Show All Results' to reveal both sets of points together on the charts.",
+                mission: "Click 'Show All Results' to reveal both sets of points together on Alice's chart.",
                 actionBtnText: "📊 Show All Results",
                 onEnter: () => {
                     const aToggle = document.getElementById('aliceShowAllToggle');
@@ -1152,7 +1159,7 @@
                     const aToggle = document.getElementById('aliceShowAllToggle');
                     const bToggle = document.getElementById('bobShowAllToggle');
                     if (aToggle) aToggle.checked = true;
-                    if (bToggle) bToggle.checked = true;
+                    if (bToggle) bToggle.checked = false; // Only check Alice's checkbox!
                     updateCharts();
                     completeTourAction();
                 }
@@ -1208,17 +1215,17 @@
             {
                 number: 10,
                 stepLabel: "Step 5",
-                targetId: "emitSingleBtn",
+                targetId: "batchSimControl",
                 category: "Data Collection",
-                title: "5. Measuring 75 Photon Pairs",
-                desc: "We now simulate measuring 75 photon pairs to collect sufficient raw coincidence events to build a complete 30-bit shared key.",
-                mission: "Click 'Measure 75 Pairs Batch' to collect the dataset.",
-                actionBtnText: "🚀 Measure 75 Pairs Batch",
+                title: "5. Measuring Photon Pairs",
+                desc: "We now simulate measuring photon pairs (recommended for your message) to collect sufficient raw coincidence events to build a complete 30-bit shared key without having to click one by one.",
+                mission: "Click 'Simulate Pairs' to collect the dataset instantly without animation.",
+                actionBtnText: "🎲 Simulate Pairs",
                 action: async () => {
                     const btn = document.getElementById('tourActionBtn');
-                    if (btn) btn.innerHTML = `<span>⏳ Simulating 75 Pairs...</span>`;
-                    await runBatchSimulation(75);
-                    if (btn) btn.innerHTML = `<span>✅ 75 Pairs Simulated</span>`;
+                    if (btn) btn.innerHTML = `<span>⏳ Simulating Pairs...</span>`;
+                    await runBatchSimulation();
+                    if (btn) btn.innerHTML = `<span>✅ Pairs Simulated</span>`;
                     completeTourAction();
                 }
             },
@@ -1352,10 +1359,24 @@
             document.getElementById('tourCategory').innerText = step.category;
             document.getElementById('tourTitle').innerText = step.title;
             document.getElementById('tourDescription').innerText = step.desc;
-            document.getElementById('tourMission').innerText = step.mission;
-            document.getElementById('tourActionBtn').innerHTML = `<span>${step.actionBtnText}</span>`;
+
+            const actionCard = document.getElementById('tourActionCard');
             const actionBtn = document.getElementById('tourActionBtn');
-            if (actionBtn) actionBtn.classList.remove('ring-2', 'ring-emerald-400');
+            if (step.actionBtnText && step.mission) {
+                if (actionCard) {
+                    actionCard.classList.remove('hidden');
+                    document.getElementById('tourMission').innerText = step.mission;
+                }
+                if (actionBtn) {
+                    actionBtn.classList.remove('hidden');
+                    actionBtn.innerHTML = `<span>${step.actionBtnText}</span>`;
+                    actionBtn.classList.remove('ring-2', 'ring-emerald-400');
+                }
+            } else {
+                if (actionCard) actionCard.classList.add('hidden');
+                if (actionBtn) actionBtn.classList.add('hidden');
+                tourActionCompleted = true;
+            }
 
             document.getElementById('tourPrevBtn').disabled = (currentTourStep === 1);
             
@@ -1407,7 +1428,6 @@
         }
 
         function scrollAndPositionSpotlight(targetConfig) {
-            // Find first element to scroll into view
             let scrollEl = null;
             if (typeof targetConfig === 'string') {
                 scrollEl = document.getElementById(targetConfig);
@@ -1421,6 +1441,7 @@
             }
             positionTourHud(targetConfig);
             requestAnimationFrame(() => positionTourHud(targetConfig));
+            setTimeout(() => positionTourHud(targetConfig), 50);
         }
 
         function positionTourHud(targetConfig) {
@@ -1428,10 +1449,7 @@
             const s2 = document.getElementById('tutorialSpotlight2');
             if (!s1) return;
 
-            const scrollX = window.pageXOffset || document.documentElement.scrollLeft;
-            const scrollY = window.pageYOffset || document.documentElement.scrollTop;
-            const pad = 5;
-
+            const pad = 4;
             let firstTargetForHud = null;
 
             if (Array.isArray(targetConfig) && targetConfig.length === 2 && (Array.isArray(targetConfig[0]) || typeof targetConfig[0] === 'string')) {
@@ -1440,8 +1458,8 @@
                 const rect2 = getEnclosingRect(targetConfig[1]);
 
                 if (rect1) {
-                    s1.style.top = `${rect1.top + scrollY - pad}px`;
-                    s1.style.left = `${rect1.left + scrollX - pad}px`;
+                    s1.style.top = `${rect1.top - pad}px`;
+                    s1.style.left = `${rect1.left - pad}px`;
                     s1.style.width = `${rect1.width + pad * 2}px`;
                     s1.style.height = `${rect1.height + pad * 2}px`;
                     s1.classList.remove('hidden');
@@ -1451,8 +1469,8 @@
                 }
 
                 if (rect2 && s2) {
-                    s2.style.top = `${rect2.top + scrollY - pad}px`;
-                    s2.style.left = `${rect2.left + scrollX - pad}px`;
+                    s2.style.top = `${rect2.top - pad}px`;
+                    s2.style.left = `${rect2.left - pad}px`;
                     s2.style.width = `${rect2.width + pad * 2}px`;
                     s2.style.height = `${rect2.height + pad * 2}px`;
                     s2.classList.remove('hidden');
@@ -1463,8 +1481,8 @@
                 // Single target
                 const rect = getEnclosingRect(targetConfig);
                 if (rect) {
-                    s1.style.top = `${rect.top + scrollY - pad}px`;
-                    s1.style.left = `${rect.left + scrollX - pad}px`;
+                    s1.style.top = `${rect.top - pad}px`;
+                    s1.style.left = `${rect.left - pad}px`;
                     s1.style.width = `${rect.width + pad * 2}px`;
                     s1.style.height = `${rect.height + pad * 2}px`;
                     s1.classList.remove('hidden');
@@ -1484,20 +1502,42 @@
             const hud = document.getElementById('tutorialHud');
             if (!hud || !rect) return;
 
-            const hudWidth = hud.offsetWidth || 380;
+            const hudWidth = hud.offsetWidth || 400;
             const hudHeight = hud.offsetHeight || 260;
             const vpWidth = window.innerWidth;
             const vpHeight = window.innerHeight;
 
-            // Check if highlighted element overlaps with bottom-right corner area (viewport-relative)
-            const overlapsBottomRight = (rect.right > (vpWidth - hudWidth - 30)) && (rect.bottom > (vpHeight - hudHeight - 30));
+            let targetInBottomRight = (rect.right > (vpWidth - hudWidth - 30)) && (rect.bottom > (vpHeight - hudHeight - 30));
+            let targetInBottomLeft = (rect.left < hudWidth + 30) && (rect.bottom > (vpHeight - hudHeight - 30));
 
-            hud.style.top = 'auto';
-            hud.style.bottom = '20px';
-            if (overlapsBottomRight) {
+            const s2 = document.getElementById('tutorialSpotlight2');
+            if (s2 && !s2.classList.contains('hidden')) {
+                const s2Rect = s2.getBoundingClientRect();
+                if ((s2Rect.right > (vpWidth - hudWidth - 30)) && (s2Rect.bottom > (vpHeight - hudHeight - 30))) {
+                    targetInBottomRight = true;
+                }
+                if ((s2Rect.left < hudWidth + 30) && (s2Rect.bottom > (vpHeight - hudHeight - 30))) {
+                    targetInBottomLeft = true;
+                }
+            }
+
+            if (targetInBottomRight && targetInBottomLeft) {
+                // Both bottom areas have highlights (e.g. Step 4 Alice & Bob basis buttons)
+                // Position HUD at top-right below navigation bar so controls are visible!
+                hud.style.top = '70px';
+                hud.style.bottom = 'auto';
+                hud.style.left = 'auto';
+                hud.style.right = '20px';
+            } else if (targetInBottomRight) {
+                // Move HUD to bottom-left
+                hud.style.top = 'auto';
+                hud.style.bottom = '20px';
                 hud.style.left = '20px';
                 hud.style.right = 'auto';
             } else {
+                // Default bottom-right corner
+                hud.style.top = 'auto';
+                hud.style.bottom = '20px';
                 hud.style.left = 'auto';
                 hud.style.right = '20px';
             }
@@ -1561,8 +1601,7 @@
             if (tourActive) {
                 const step = tourSteps[currentTourStep - 1];
                 if (step) {
-                    const el = document.getElementById(step.targetId);
-                    if (el) positionTourHud(el);
+                    positionTourHud(step.targetId);
                 }
             }
         });
@@ -1570,8 +1609,7 @@
             if (tourActive) {
                 const step = tourSteps[currentTourStep - 1];
                 if (step) {
-                    const el = document.getElementById(step.targetId);
-                    if (el) positionTourCard(el);
+                    positionTourHud(step.targetId);
                 }
             }
         }, { passive: true });
@@ -3700,10 +3738,8 @@
                 if (bKeyUsed) { bKeyUsed.innerText = "No"; bKeyUsed.className = "px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 font-mono"; }
                 updateKeyStatusBadges();
 
-                // Animate one illustrative pair on bench
-                if (events.length > 0) {
-                    activePhotons.push(new EntangledPair(events[events.length - 1]));
-                }
+                // Simulating multiple photons does not animate
+                activePhotons = [];
 
                 updateCharts();
                 updateStats();
