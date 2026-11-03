@@ -1,8 +1,8 @@
 import pytest
 from fastapi.testclient import TestClient
-import qiskit_api
+import server
 
-client = TestClient(qiskit_api.app)
+client = TestClient(server.app)
 
 def test_thorlabs_step_same_basis():
     # Both in HV basis

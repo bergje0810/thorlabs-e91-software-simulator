@@ -44,7 +44,6 @@ python -m pytest
 ### 3. Start Application
 ```bash
 python server.py
-# or: python qiskit_api.py
 ```
 Open **[http://localhost:8000](http://localhost:8000)** in your browser.
 

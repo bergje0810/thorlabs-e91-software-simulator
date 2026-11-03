@@ -3,10 +3,10 @@ import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from fastapi.testclient import TestClient
-import qiskit_api
+import server
 from types import SimpleNamespace
 
-client = TestClient(qiskit_api.app)
+client = TestClient(server.app)
 
 
 class MockJob:
@@ -41,9 +41,9 @@ def test_chsh_with_mock(monkeypatch):
         {'00': 80},   # E3 -> corr = 1
         {'00': 80},   # E4 -> corr = 1
     ]
-    monkeypatch.setattr(qiskit_api, 'simulator', MockSim(counts_sequence=seq))
+    monkeypatch.setattr(server, 'simulator', MockSim(counts_sequence=seq))
     # Avoid qiskit transpiler needing backend target metadata in unit tests
-    monkeypatch.setattr(qiskit_api, 'transpile', lambda qc, backend: qc)
+    monkeypatch.setattr(server, 'transpile', lambda qc, backend: qc)
 
     res = client.post('/api/phase1/chsh', json={'shots': 80})
     assert res.status_code == 200
@@ -60,8 +60,8 @@ def test_attack_with_mock(monkeypatch):
         {'01': 50, '10': 50},
         {'01': 50, '10': 50},
     ]
-    monkeypatch.setattr(qiskit_api, 'simulator', MockSim(counts_sequence=seq))
-    monkeypatch.setattr(qiskit_api, 'transpile', lambda qc, backend: qc)
+    monkeypatch.setattr(server, 'simulator', MockSim(counts_sequence=seq))
+    monkeypatch.setattr(server, 'transpile', lambda qc, backend: qc)
 
     res = client.post('/api/phase3/attack', json={'shots': 100, 'intercept_prob': 1.0})
     assert res.status_code == 200
@@ -81,10 +81,10 @@ def test_simulator_exception_propagates(monkeypatch):
     def bad_run(*args, **kwargs):
         raise RuntimeError('simulator failed')
 
-    monkeypatch.setattr(qiskit_api, 'simulator', SimpleNamespace(run=bad_run, num_qubits=2))
-    monkeypatch.setattr(qiskit_api, 'transpile', lambda qc, backend: qc)
+    monkeypatch.setattr(server, 'simulator', SimpleNamespace(run=bad_run, num_qubits=2))
+    monkeypatch.setattr(server, 'transpile', lambda qc, backend: qc)
     # Prevent server exceptions from being re-raised by TestClient so we can assert the 500 response
     from fastapi.testclient import TestClient as LocalTestClient
-    with LocalTestClient(qiskit_api.app, raise_server_exceptions=False) as c:
+    with LocalTestClient(server.app, raise_server_exceptions=False) as c:
         res = c.post('/api/phase1/chsh', json={'shots': 10})
     assert res.status_code == 500
