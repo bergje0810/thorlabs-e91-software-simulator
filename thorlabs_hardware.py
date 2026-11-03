@@ -126,11 +126,11 @@ class ThorlabsHardwareManager:
                         if name_el is not None and val_el is not None and val_el.text:
                             name = name_el.text.strip()
                             val = val_el.text.strip()
-                            if name == "Laser Controller" and val:
+                            if name == "Laser Controller" and val and val.lower() != "none":
                                 self.laser_serial = val
-                            elif name == "Piezo Controller" and val:
+                            elif name == "Piezo Controller" and val and val.lower() != "none":
                                 self.piezo_serial = val
-                            elif name == "Strain Gauge Reader" and val:
+                            elif name == "Strain Gauge Reader" and val and val.lower() != "none":
                                 self.sg_serial = val
             except Exception as e:
                 print(f"[ThorlabsHardware] Warning reading DeviceConfig.xml: {e}")
@@ -224,6 +224,13 @@ class ThorlabsHardwareManager:
                             "type_id": int(info.typeID),
                             "description": info.description.decode("ascii", errors="ignore").strip(),
                         })
+
+                    # If current laser serial is missing, None, or not in connected serials, auto-detect KLD101
+                    if not self.laser_serial or self.laser_serial.lower() == "none" or self.laser_serial not in serials:
+                        for dev in kinesis_devices:
+                            if dev["serial"].startswith("98") or "laser" in dev["description"].lower():
+                                self.laser_serial = dev["serial"]
+                                break
                 except Exception as e:
                     print(f"[ThorlabsHardware] Device scan error: {e}")
 
@@ -260,16 +267,44 @@ class ThorlabsHardwareManager:
             if self._ld_dll is not None and not self._kld_connected:
                 try:
                     self._dm_dll.TLI_BuildDeviceList()
-                    sn_bytes = self.laser_serial.encode("ascii")
-                    res = self._ld_dll.LD_Open(sn_bytes)
-                    if res == 0:
-                        self._ld_dll.LD_StartPolling(sn_bytes, 200)
-                        time.sleep(0.25)
-                        self._ld_dll.LD_RequestStatus(sn_bytes)
-                        self._ld_dll.LD_RequestLaserSetPoint(sn_bytes)
-                        self._kld_connected = True
+                    target_serial = self.laser_serial
+
+                    buf = ctypes.create_string_buffer(512)
+                    self._dm_dll.TLI_GetDeviceListExt(buf, 512)
+                    serials = [s for s in buf.value.decode("ascii", errors="ignore").split(",") if s.strip()]
+
+                    if not target_serial or target_serial.lower() == "none" or target_serial not in serials:
+                        for sn in serials:
+                            if sn.startswith("98"):
+                                target_serial = sn
+                                self.laser_serial = sn
+                                break
+                            info = TLI_DeviceInfo()
+                            self._dm_dll.TLI_GetDeviceInfo(sn.encode("ascii"), ctypes.byref(info))
+                            if info.isLaser or info.typeID == 98 or "laser" in info.description.decode("ascii", errors="ignore").lower():
+                                target_serial = sn
+                                self.laser_serial = sn
+                                break
+
+                    if not target_serial or target_serial.lower() == "none":
+                        errors.append("No Thorlabs KLD101 Laser Controller found on USB.")
                     else:
-                        errors.append(f"KLD101 ({self.laser_serial}) LD_Open returned code {res}")
+                        sn_bytes = target_serial.encode("ascii")
+                        res = self._ld_dll.LD_Open(sn_bytes)
+                        if res == 0:
+                            self._ld_dll.LD_StartPolling(sn_bytes, 200)
+                            time.sleep(0.25)
+                            self._ld_dll.LD_RequestStatus(sn_bytes)
+                            self._ld_dll.LD_RequestLaserSetPoint(sn_bytes)
+                            self._kld_connected = True
+                            self.laser_serial = target_serial
+                        elif res == 33:
+                            errors.append(
+                                f"KLD101 ({target_serial}) error 33: Device is in use by another program. "
+                                f"Please make sure Thorlabs EDU-QOP1 software is completely closed."
+                            )
+                        else:
+                            errors.append(f"KLD101 ({target_serial}) LD_Open returned code {res}")
                 except Exception as e:
                     errors.append(f"KLD101 connection error: {e}")
 

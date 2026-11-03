@@ -3076,6 +3076,9 @@
 
         function updateHardwareStatusUI(data) {
             if (!data) return;
+            if (data.errors && data.errors.length > 0) {
+                showLaserError(data.errors.join(" | "));
+            }
             const kld = data.laser || {};
             const settings = data.settings || {};
             const ttConnected = !!(data.timetagger_connected || data.timetagger?.connected);
@@ -3386,7 +3389,7 @@
             laserErrorTimer = setTimeout(() => {
                 el.classList.add('hidden');
                 laserErrorTimer = null;
-            }, 2000); // precisely 2 seconds
+            }, 5000);
         }
 
         async function toggleLaserOutput() {
