@@ -12,7 +12,13 @@ client = TestClient(app)
 def test_index_served():
     res = client.get("/index.html")
     assert res.status_code == 200
-    assert "E91 QKD SUITE" in res.text
+    assert "Thorlabs" in res.text
+    assert "E91 Quantum Key Distribution Protocol" in res.text
+
+
+def test_thorlabs_redirect_served():
+    res = client.get("/thorlabs_e91.html")
+    assert res.status_code == 200
 
 
 def test_chsh_endpoint():
@@ -33,7 +39,6 @@ def test_keygen_endpoint():
     assert len(data["bob_bases"]) == n
     assert len(data["raw_bits_a"]) == n
     assert len(data["raw_bits_b"]) == n
-    # bits are 0 or 1
     for b in data["raw_bits_a"] + data["raw_bits_b"]:
         assert b in (0, 1)
 

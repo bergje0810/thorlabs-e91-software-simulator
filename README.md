@@ -1,160 +1,70 @@
-# E91 Quantum Key Distribution (QKD) Suite
+# Thorlabs EDU-QOP1(/M) & EDU-QOPA1(/M) — Experiment 25.4 E91 Simulator
 
-
-## Overview
-
-This project is a **web-based, interactive simulation suite** for **Artur Ekert’s 1991 Bell-inequality-based Quantum Key Distribution (E91) protocol**.
-The interface and workflow are intentionally designed to mirror the *conceptual structure* of the E91 protocol rather than treating QKD as a black-box key generator.
-
-All simulations are executed on a **server-side Qiskit AerSimulator**, and the results are rendered entirely in the browser. There is **no console output**; all protocol behavior is visualized through interactive charts, tables, and status indicators.
+An interactive, educational quantum optics learning environment for **Artur Ekert's 1991 Bell-inequality-based Quantum Key Distribution (E91) protocol**, specifically modeling the **Thorlabs "EDU-QOP1(/M) and EDU-QOPA1(/M) Quantum Optics Kit and Polarization-Entanglement Extension Kit" Experiment 25.4** and **Section 26.2 (E91 QKD Tab)**.
 
 ---
 
-## Project Structure
+## Key Features
 
-```
-e91_protocol_qkd/
-│
-├── index.html                    # Main dashboard (protocol overview)
-├── e91_phase1.html               # Phase 1: Entanglement verification
-├── e91_phase2.html               # Phase 2: Key generation & sifting
-├── e91_advanced_simulation.html  # Advanced: Security breach & noise analysis
-│
-├── qiskit_api.py                 # Server-side Qiskit simulation engine
-├── requirements.txt              # Python dependencies
-├── LICENSE
-```
+1. **Top-Down Animated Optical Bench (Figure 242)**:
+   - High-fidelity visual simulation of the physical optical breadboard.
+   - **Central SPDC Source**: 405 nm violet diode pump laser pumping crossed BBO crystals to produce paired 810 nm entangled photons in Bell state $|\psi^+\rangle = \frac{1}{\sqrt{2}}(|HH\rangle + |VV\rangle)$.
+   - **Alice's Arm (Left)**: Rotatable Half-Wave Plate (0° or 22.5°), Polarizing Beamsplitter (PBS), and Detectors **T** (Transmission, Bit 0) & **B** (Reflection, Bit 1).
+   - **Bob's Arm (Right)**: Rotatable Half-Wave Plate (0° or 22.5°), Polarizing Beamsplitter (PBS), and Detectors **A** (Transmission, Bit 0) & **C** (Reflection, Bit 1).
+   - **Real-Time Photon Dynamics**: Individual photon wavepackets with polarization direction vectors travel through the waveplates and split at the PBS cubes into the detectors.
+   - **Detector Click Sparks & Coincidence Tagger**: Visual pulse ripples and coincidence unit readout (e.g. `T&A`, `B&C`, `T&C`, `B&A`).
+   - Interactive components: Click directly on Alice's or Bob's HWP in the canvas to rotate them!
 
----
+2. **Interactive 8-Step Educational Learning Guide**:
+   - Step 1: The Quantum Source & Detectors (SPDC and Bell state physics).
+   - Step 2: Message Encoding (5-bit alphabet representation from Thorlabs manual Fig 248: "photon" = 30 bits).
+   - Step 3: Basis Selection (HWP at 0° [F1] vs 22.5° [F2]).
+   - Step 4: Coincidence Measurements (Simulating 75 pairs as in Fig 246).
+   - Step 5: Public Basis Reconciliation / Sifting [F3].
+   - Step 6: Extracting Key & Observing Physical ~5% Bit Flips (data point #10 in Fig 247).
+   - Step 7: One-Time Pad Encryption via Bitwise XOR [F5].
+   - Step 8: Public Channel Transmission & Decryption [F6 & F7] (reproducing "phpton" on bit flips as in Fig 250).
 
-## System Architecture
+3. **Thorlabs Dual Software Interface (Section 26.2)**:
+   - Replicates the official software windows with side-by-side or single-party view.
+   - Full keyboard hotkeys (`F1` to `F12`) with turn yielding (`F12`).
+   - Dual-screen pop-out support across multiple monitors using `BroadcastChannel`.
+   - Table 25.4.3 coincidence rate matrix monitoring.
 
-* **Frontend**: HTML + JavaScript (interactive UI)
-* **Backend**: Python (FastAPI + Uvicorn)
-* **Quantum Engine**: Qiskit AerSimulator
-* **Visualization**: Chart.js
-
-The frontend never executes quantum logic locally. All quantum circuits, measurements, and statistics are computed on the backend and returned as structured data for visualization.
-
----
-
-## Application Pages & Protocol Flow
-
-### 1. Main Dashboard (`index.html`)
-
-![Main Dashboard](./assets/index.png)
-
-The dashboard provides a conceptual overview of the E91 protocol and serves as the entry point to each experimental phase:
-
-* **Phase 1 – Entanglement Verification**
-* **Phase 2 – Key Generation & Sifting**
-* **Advanced – Noise & Security Analysis**
-
-Each module corresponds to a distinct physical or cryptographic objective, reflecting how the E91 protocol is analyzed in theory.
+4. **Quantum Backend**:
+   - Powered by Qiskit AerSimulator and FastAPI.
 
 ---
 
-### 2. Phase 1 — Entanglement Verification (`e91_phase1.html`)
-
-![Phase 1](./assets/phase1.png)
-
-**Goal:** Verify quantum non-locality through CHSH Bell inequality violation.
-
-* Bell state preparation using entangled qubits
-* Measurements at four analyzer angle combinations
-* Correlation extraction and CHSH S-value calculation
-
-A typical result shows an S-value close to the Tsirelson bound:
-
-```
-S ≈ 2.79  → Bell inequality violated
-```
-
-This phase establishes **physical trust** in the quantum channel before key generation.
-
----
-
-### 3. Phase 2 — Key Generation & Sifting (`e91_phase2.html`)
-
-![Phase 2](./assets/phase2.png)
-
-**Goal:** Generate a shared secret key using entangled measurements.
-
-* Random basis selection by Alice and Bob
-* Measurement outcome logging
-* Basis reconciliation and sifting
-* Extraction of matching raw key bits
-
-The transmission log is displayed in real time, allowing inspection of which events contribute to the final key.
-
----
-
-### 4. Advanced Simulation — Security Breach & Noise Analysis (`e91_advanced_simulation.html`)
-
-![Advanced Simulation](./assets/adv.png)
-
-**Goal:** Analyze the effect of eavesdropping and decoherence on protocol security.
-
-* Simulated intercept-resend attack by Eve
-* Real-time monitoring of S-value stability
-* Visualization of Bell inequality degradation
-
-When an attack is active, the S-value drops below the classical bound:
-
-```
-S ≈ 1.45  → Security breach detected
-```
-
-This demonstrates how E91 detects eavesdropping through loss of non-local correlations.
-
----
-
-## Design Philosophy
-
-* **Concept-first**: Each protocol phase is explicitly separated
-* **No black-box outputs**: All results are interpretable and visual
-* **Physics-aligned**: Security is tied directly to Bell inequality violation
-
-This project is intended as both a **learning tool** and a **research-oriented prototype**, emphasizing clarity, correctness, and physical intuition.
-
----
-## How to Run
+## Quickstart
 
 ### 1. Install Dependencies
-
-Create a virtual environment (recommended) and install the required Python packages:
-
 ```bash
 pip install -r requirements.txt
 ```
 
-The backend relies on **Qiskit AerSimulator** and a lightweight API server for handling quantum circuit execution.
+### 2. Run Test Suite
+```bash
+python -m pytest
+```
 
----
-
-### 2. Start the Backend Server
-
-Run the Qiskit simulation backend:
-
+### 3. Start the Server
 ```bash
 python qiskit_api.py
 ```
-
-This starts the server that executes all quantum circuits and returns measurement results to the frontend.
-
----
-
-### 3. Launch the Frontend
-
-Open your `8000 port` in a web browser. All protocol phases are accessed from the dashboard:
-
-* Phase 1: Entanglement verification
-* Phase 2: Key generation & sifting
-* Advanced: Security breach & noise analysis
-
-> Note: All quantum computation is performed server-side. The browser is used exclusively for visualization and interaction.
+Open **[http://localhost:8000](http://localhost:8000)** in your browser.
 
 ---
-## License
 
-This project is released under the terms specified in the `LICENSE` file.
+## Keyboard Hotkeys Reference (Section 26.2)
+
+| Key | Action | Physical Meaning |
+| :--- | :--- | :--- |
+| **F1** | `0°\|90°` (HV Basis) | Sets analyzer HWP to 0° |
+| **F2** | `-45°\|45°` (Diagonal Basis) | Sets analyzer HWP to 22.5° |
+| **F3** | `Filter by Bases` | Basis reconciliation (sifting) |
+| **F4** | `Calculate Key` | Key extraction from matching events |
+| **F5** | `Encrypt Msg` | Bitwise XOR ($\text{Message} \oplus \text{Key}$) |
+| **F6** | `Send Message` | Public channel transmission |
+| **F7** | `Decrypt Msg` | Bitwise XOR ($\text{Ciphertext} \oplus \text{BobKey}$) |
+| **F12** | `Yield Control` | Switches control focus between Alice and Bob |
