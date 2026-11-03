@@ -460,6 +460,13 @@
 
                 <!-- Kit Settings -->
                 <div class="flex items-center space-x-3 text-xs">
+                    <!-- Turn Ding Sound Toggle -->
+                    <label class="flex items-center space-x-1.5 cursor-pointer select-none bg-slate-900/80 px-2.5 py-1 rounded-lg border border-slate-800 hover:border-slate-700 text-slate-300 hover:text-white transition-all shadow-sm" title="Enable 'ding' chime sound when software control changes between Alice and Bob (F12)">
+                        <input type="checkbox" id="turnSoundToggle" checked class="accent-blue-500 w-3.5 h-3.5 rounded cursor-pointer" onchange="toggleTurnSound(this.checked)">
+                        <span class="text-amber-400 text-xs">🔔</span>
+                        <span class="font-medium text-[11px]">Turn Ding</span>
+                    </label>
+
                     <div id="simErrorRateWrapper" class="flex items-center space-x-1.5">
                         <label class="text-slate-400">Physical Error:</label>
                         <select id="errorRateSelect" class="bg-slate-800 border border-slate-700 rounded px-2 py-1 text-slate-200">
@@ -4028,14 +4035,87 @@
             document.getElementById('statQber').innerText = qber + "%";
         }
 
+        let turnSoundEnabled = true;
+        let audioCtx = null;
+
+        function isTurnSoundEnabled() {
+            const toggle = document.getElementById('turnSoundToggle');
+            return toggle ? toggle.checked : turnSoundEnabled;
+        }
+
+        function toggleTurnSound(enabled) {
+            turnSoundEnabled = enabled;
+            try {
+                localStorage.setItem('e91_turn_sound', enabled ? 'true' : 'false');
+            } catch (e) {}
+            if (enabled) {
+                playTurnDing();
+            }
+        }
+
+        function playTurnDing() {
+            if (!isTurnSoundEnabled()) return;
+            try {
+                const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
+                if (!AudioCtxClass) return;
+                if (!audioCtx) audioCtx = new AudioCtxClass();
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+                const now = audioCtx.currentTime;
+
+                // Strike transient (crisp bell strike)
+                const strike = audioCtx.createOscillator();
+                const strikeGain = audioCtx.createGain();
+                strike.type = 'triangle';
+                strike.frequency.setValueAtTime(2093, now); // High C7
+                strikeGain.gain.setValueAtTime(0.12, now);
+                strikeGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.08);
+                strike.connect(strikeGain);
+                strikeGain.connect(audioCtx.destination);
+                strike.start(now);
+                strike.stop(now + 0.08);
+
+                // Body resonance (clean bell fundamental C6: 1046.5 Hz)
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(1046.5, now);
+                gain.gain.setValueAtTime(0.22, now);
+                gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.6);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(now);
+                osc.stop(now + 0.6);
+
+                // Warm harmonic ring (E6: 1318.5 Hz)
+                const harm = audioCtx.createOscillator();
+                const harmGain = audioCtx.createGain();
+                harm.type = 'sine';
+                harm.frequency.setValueAtTime(1318.5, now);
+                harmGain.gain.setValueAtTime(0.09, now);
+                harmGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.45);
+                harm.connect(harmGain);
+                harmGain.connect(audioCtx.destination);
+                harm.start(now);
+                harm.stop(now + 0.45);
+            } catch (e) {
+                console.warn('Turn sound chime error:', e);
+            }
+        }
+
         // Yield Control [F12]
         function yieldControl() {
             setTurn(activeTurn === 'alice' ? 'bob' : 'alice');
             syncWithBroadcast();
         }
 
-        function setTurn(turn) {
+        function setTurn(turn, playSound = true) {
+            const changed = (activeTurn !== turn);
             activeTurn = turn;
+            if (changed && playSound) {
+                playTurnDing();
+            }
             const indicator = document.getElementById('turnIndicator');
             const aliceWin = document.getElementById('aliceWindow');
             const bobWin = document.getElementById('bobWindow');
@@ -4378,10 +4458,20 @@
 
         // Initialize on page load
         window.onload = () => {
+            // Restore turn sound setting from localStorage
+            try {
+                const stored = localStorage.getItem('e91_turn_sound');
+                if (stored !== null) {
+                    const toggle = document.getElementById('turnSoundToggle');
+                    if (toggle) toggle.checked = (stored === 'true');
+                    turnSoundEnabled = (stored === 'true');
+                }
+            } catch (e) {}
+
             initCharts();
             updateMessageBits();
             refreshCoincidenceMatrix();
-            setTurn('alice');
+            setTurn('alice', false); // Initial setup without chime
             scanThorlabsHardware();
 
             // Start optical bench rendering loop
