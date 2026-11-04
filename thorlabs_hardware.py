@@ -318,10 +318,21 @@ class ThorlabsHardwareManager:
     def disconnect_hardware(self) -> Dict[str, Any]:
         """Release Time Tagger and KLD101 USB handles so EDU-QOP1.exe or Time Tagger Lab can use them."""
         with self._lock:
+            self._cancel_wait = True
             if self._tagger is not None and self._tt_module is not None:
                 try:
-                    self._stream = None
-                    self._countrate = None
+                    if self._stream is not None:
+                        try:
+                            self._stream.stop()
+                        except Exception:
+                            pass
+                        self._stream = None
+                    if self._countrate is not None:
+                        try:
+                            self._countrate.stop()
+                        except Exception:
+                            pass
+                        self._countrate = None
                     self._coinc = None
                     self._tt_module.freeTimeTagger(self._tagger)
                 except Exception as e:
@@ -336,13 +347,14 @@ class ThorlabsHardwareManager:
                     self._ld_dll.LD_DisableOutput(sn_bytes)
                     time.sleep(0.05)
                     self._ld_dll.LD_StopPolling(sn_bytes)
+                    time.sleep(0.05)
                     self._ld_dll.LD_Close(sn_bytes)
+                    time.sleep(0.05)
                 except Exception as e:
                     print(f"[ThorlabsHardware] Error closing KLD101: {e}")
                 finally:
                     self._kld_connected = False
 
-            self.mode = "simulation"
             return self.get_status()
 
     def _apply_timetagger_settings(self):
@@ -459,7 +471,7 @@ class ThorlabsHardwareManager:
 
     def set_laser_output(self, enable: bool) -> Dict[str, Any]:
         with self._lock:
-            if not self._kld_connected and self._ld_dll is not None:
+            if enable and not self._kld_connected and self._ld_dll is not None:
                 self.connect_hardware()
             if self._kld_connected and self._ld_dll is not None:
                 sn_bytes = self.laser_serial.encode("ascii")

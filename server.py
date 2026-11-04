@@ -403,8 +403,6 @@ async def hardware_cancel_wait():
 @app.post("/api/hardware/mode")
 async def hardware_set_mode(req: HardwareModeRequest):
     if req.mode == "hardware":
-        if hardware_manager._tagger is None:
-            return await asyncio.to_thread(hardware_manager.connect_hardware)
         hardware_manager.mode = "hardware"
     else:
         hardware_manager.cancel_waiting_measurement()

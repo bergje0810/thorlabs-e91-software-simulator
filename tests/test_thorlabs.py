@@ -122,3 +122,18 @@ def test_session_state_sync():
     assert state["aliceMsgText"] == "cat"
     assert state["receivedByBob"]["bits"] == "111000111000111"
     assert state["activeTurn"] == "bob"
+
+
+def test_hardware_disconnect_and_mode_switching():
+    res_disc = client.post("/api/hardware/disconnect")
+    assert res_disc.status_code == 200
+    status = res_disc.json()
+    assert status["timetagger_connected"] is False
+    assert status["laser"]["connected"] is False
+
+    # Switching mode to hardware must NOT auto-reconnect if tagger was disconnected
+    res_mode = client.post("/api/hardware/mode", json={"mode": "hardware"})
+    assert res_mode.status_code == 200
+    mode_data = res_mode.json()
+    assert mode_data["mode"] == "hardware"
+    assert mode_data["timetagger_connected"] is False

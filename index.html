@@ -3235,6 +3235,8 @@
         }
 
         async function disconnectThorlabsHardware() {
+            const btn = document.getElementById('hwDisconnectBtn');
+            if (btn) btn.innerHTML = `<span>⏳ Disconnecting USB...</span>`;
             if (rateMonitorTimer) {
                 clearInterval(rateMonitorTimer);
                 rateMonitorTimer = null;
@@ -3259,10 +3261,12 @@
             try {
                 const res = await fetch('/api/hardware/disconnect', { method: 'POST' });
                 const data = await res.json();
-                await setHardwareMode(false);
+                // Stay on Real Hardware tab! Do NOT switch to simulation tab!
                 updateHardwareStatusUI(data);
             } catch (e) {
                 console.error("Hardware disconnect failed:", e);
+            } finally {
+                if (btn) btn.innerHTML = `<span>⏏ Disconnect (Free USB)</span>`;
             }
         }
 
