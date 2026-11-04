@@ -2864,45 +2864,69 @@
         }
 
         function updateKeyStatusBadges() {
-            const rawText = document.getElementById('aliceMsgText')?.value || "";
             const mode = document.getElementById('encodingSelect')?.value || '5bit';
-            const bits = textToBits(rawText, mode);
-            const msgLen = bits.length;
+            const rawAliceText = document.getElementById('aliceMsgText')?.value || "";
+            const aliceMsgBits = textToBits(rawAliceText, mode);
 
-            // Alice Key Status
+            // Alice Key Status: If Alice received ciphertext from Bob, required key is that message's length;
+            // otherwise it is Alice's own message length.
+            let aReqLen = (receivedByAlice && receivedByAlice.bits)
+                ? receivedByAlice.bits.length
+                : aliceMsgBits.length;
             const aKeyLen = aliceKey.length;
             const aBadge = document.getElementById('aliceKeyStatusBadge');
             if (aBadge) {
-                if (aKeyLen === 0) {
+                if (aReqLen === 0) {
                     aBadge.className = "text-[10px] px-2 py-0.5 rounded bg-slate-900 text-slate-400 border border-slate-800 font-mono font-bold";
-                    aBadge.innerText = `Need ${msgLen} bits (0/${msgLen})`;
-                } else if (aKeyLen >= msgLen) {
+                    aBadge.innerText = `Key Ready (${aKeyLen} bits)`;
+                } else if (aKeyLen === 0) {
+                    aBadge.className = "text-[10px] px-2 py-0.5 rounded bg-slate-900 text-slate-400 border border-slate-800 font-mono font-bold";
+                    aBadge.innerText = `Need ${aReqLen} bits (0/${aReqLen})`;
+                } else if (aKeyLen >= aReqLen) {
                     aBadge.className = "text-[10px] px-2 py-0.5 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-800 font-mono font-bold";
-                    aBadge.innerText = `Key Ready (${aKeyLen}/${msgLen} bits) ✓`;
+                    aBadge.innerText = `Key Ready (${aKeyLen}/${aReqLen} bits) ✓`;
                 } else {
                     aBadge.className = "text-[10px] px-2 py-0.5 rounded bg-amber-950/80 text-amber-300 border border-amber-800 font-mono font-bold";
-                    aBadge.innerText = `Need ${msgLen - aKeyLen} more bits (${aKeyLen}/${msgLen})`;
+                    aBadge.innerText = `Need ${aReqLen - aKeyLen} more bits (${aKeyLen}/${aReqLen})`;
                 }
             }
 
-            // Bob Key Status
+            // Bob Key Status: If Bob received ciphertext from Alice, Bob's required key length for decrypting
+            // is strictly receivedByBob.bits.length!
+            // If Bob has NOT received a message yet:
+            //   - if Bob entered a message in bobMsgText, use Bob's message length
+            //   - else use Alice's message length (the target message being transmitted)
+            const rawBobText = document.getElementById('bobMsgText')?.value || "";
+            const bobMsgBits = textToBits(rawBobText, mode);
+            let bReqLen;
+            if (receivedByBob && receivedByBob.bits) {
+                bReqLen = receivedByBob.bits.length;
+            } else if (bobMsgBits.length > 0) {
+                bReqLen = bobMsgBits.length;
+            } else {
+                bReqLen = aliceMsgBits.length;
+            }
+
             const bKeyLen = bobKey.length;
             const bBadge = document.getElementById('bobKeyStatusBadge');
             if (bBadge) {
-                if (bKeyLen === 0) {
+                if (bReqLen === 0) {
                     bBadge.className = "text-[10px] px-2 py-0.5 rounded bg-slate-900 text-slate-400 border border-slate-800 font-mono font-bold";
-                    bBadge.innerText = `Need ${msgLen} bits (0/${msgLen})`;
-                } else if (bKeyLen >= msgLen) {
+                    bBadge.innerText = `Key Ready (${bKeyLen} bits)`;
+                } else if (bKeyLen === 0) {
+                    bBadge.className = "text-[10px] px-2 py-0.5 rounded bg-slate-900 text-slate-400 border border-slate-800 font-mono font-bold";
+                    bBadge.innerText = `Need ${bReqLen} bits (0/${bReqLen})`;
+                } else if (bKeyLen >= bReqLen) {
                     bBadge.className = "text-[10px] px-2 py-0.5 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-800 font-mono font-bold";
-                    bBadge.innerText = `Key Ready (${bKeyLen}/${msgLen} bits) ✓`;
+                    bBadge.innerText = `Key Ready (${bKeyLen}/${bReqLen} bits) ✓`;
                 } else {
                     bBadge.className = "text-[10px] px-2 py-0.5 rounded bg-amber-950/80 text-amber-300 border border-amber-800 font-mono font-bold";
-                    bBadge.innerText = `Need ${msgLen - bKeyLen} more bits (${bKeyLen}/${msgLen})`;
+                    bBadge.innerText = `Need ${bReqLen - bKeyLen} more bits (${bKeyLen}/${bReqLen})`;
                 }
             }
         }
 
-        function updateMessageBits() {
+        function updateMessageBits(skipSync = false) {
             const mode = document.getElementById('encodingSelect').value;
             const text = document.getElementById('aliceMsgText').value;
             const bits = textToBits(text, mode);
@@ -2957,6 +2981,9 @@
 
             if (typeof currentStep !== 'undefined' && (currentStep === 3 || currentStep === 4)) {
                 renderStep();
+            }
+            if (!skipSync) {
+                syncWithBroadcast();
             }
         }
 
@@ -3505,7 +3532,7 @@
             }
         }
 
-        function updateBobMessageBits() {
+        function updateBobMessageBits(skipSync = false) {
             const mode = document.getElementById('encodingSelect')?.value || '5bit';
             const text = document.getElementById('bobMsgText')?.value || "";
             const bits = textToBits(text, mode);
@@ -3528,6 +3555,10 @@
                 bobCiphertext = "";
                 const lbl = document.getElementById('bobEncryptLabel');
                 if (lbl) lbl.innerText = "Encrypt Msg";
+            }
+            updateKeyStatusBadges();
+            if (!skipSync) {
+                syncWithBroadcast();
             }
         }
 
@@ -3908,6 +3939,8 @@
                 document.getElementById('bobRecvBits').innerText = bitsToSend;
                 document.getElementById('bobRecvLen').innerText = bitsToSend.length;
                 document.getElementById('bobRecvText').innerText = aliceEncrypted ? `[Encrypted: ${textPreview}]` : textPreview;
+                // Yield control to Bob so Bob's turn becomes active to decrypt!
+                setTurn('bob');
             } else if (sender === 'bob') {
                 const bitsToSend = bobEncrypted ? bobCiphertext : textToBits(document.getElementById('bobMsgText').value, mode);
                 if (!bitsToSend) {
@@ -3923,7 +3956,10 @@
                 document.getElementById('aliceRecvBits').innerText = bitsToSend;
                 document.getElementById('aliceRecvLen').innerText = bitsToSend.length;
                 document.getElementById('aliceRecvText').innerText = bobEncrypted ? `[Encrypted: ${textPreview}]` : textPreview;
+                // Yield control to Alice so Alice's turn becomes active to decrypt!
+                setTurn('alice');
             }
+            updateKeyStatusBadges();
             syncWithBroadcast();
         }
 
@@ -4392,8 +4428,7 @@
         }
 
         function syncWithBroadcast() {
-            if (!broadcast) return;
-            broadcast.postMessage({
+            const payload = {
                 type: 'SYNC_STATE',
                 events: events,
                 activeTurn: activeTurn,
@@ -4408,8 +4443,27 @@
                 bobCiphertext: bobCiphertext,
                 receivedByBob: receivedByBob,
                 receivedByAlice: receivedByAlice,
-                useRealHardware: useRealHardware
-            });
+                useRealHardware: useRealHardware,
+                aliceMsgText: document.getElementById('aliceMsgText')?.value || '',
+                bobMsgText: document.getElementById('bobMsgText')?.value || '',
+                encoding: document.getElementById('encodingSelect')?.value || '5bit',
+                bobDecryptedText: document.getElementById('bobDecryptedText')?.innerText || '-',
+                bobDecryptedBits: document.getElementById('bobDecryptedBits')?.innerText || '-',
+                aliceDecryptedText: document.getElementById('aliceDecryptedText')?.innerText || '-',
+                aliceDecryptedBits: document.getElementById('aliceDecryptedBits')?.innerText || '-',
+                aliceKeyUsed: document.getElementById('aliceKeyUsedBadge')?.innerText || 'No',
+                bobKeyUsed: document.getElementById('bobKeyUsedBadge')?.innerText || 'No'
+            };
+            if (broadcast) {
+                try { broadcast.postMessage(payload); } catch (e) {}
+            }
+            try {
+                fetch('/api/session/state', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                }).catch(() => {});
+            } catch (e) {}
         }
 
         function handleBroadcastMessage(data) {
@@ -4418,22 +4472,40 @@
                 syncWithBroadcast();
                 return;
             }
-            if (data.type === 'SYNC_STATE') {
-                events = data.events || [];
-                isFiltered = !!data.isFiltered;
-                aliceKey = data.aliceKey || "";
-                bobKey = data.bobKey || "";
-                aliceEncrypted = !!data.aliceEncrypted;
-                bobEncrypted = !!data.bobEncrypted;
-                aliceCiphertext = data.aliceCiphertext || "";
-                bobCiphertext = data.bobCiphertext || "";
-                receivedByBob = data.receivedByBob || null;
-                receivedByAlice = data.receivedByAlice || null;
-                aliceChosenBasis = (data.aliceChosenBasis !== undefined) ? data.aliceChosenBasis : aliceChosenBasis;
-                bobChosenBasis = (data.bobChosenBasis !== undefined) ? data.bobChosenBasis : bobChosenBasis;
+            if (data.type === 'SYNC_STATE' || data.events !== undefined) {
+                if (data.events !== undefined) events = data.events || [];
+                if (data.isFiltered !== undefined) isFiltered = !!data.isFiltered;
+                if (data.aliceKey !== undefined) aliceKey = data.aliceKey || "";
+                if (data.bobKey !== undefined) bobKey = data.bobKey || "";
+                if (data.aliceEncrypted !== undefined) aliceEncrypted = !!data.aliceEncrypted;
+                if (data.bobEncrypted !== undefined) bobEncrypted = !!data.bobEncrypted;
+                if (data.aliceCiphertext !== undefined) aliceCiphertext = data.aliceCiphertext || "";
+                if (data.bobCiphertext !== undefined) bobCiphertext = data.bobCiphertext || "";
+                if (data.receivedByBob !== undefined) receivedByBob = data.receivedByBob || null;
+                if (data.receivedByAlice !== undefined) receivedByAlice = data.receivedByAlice || null;
+                if (data.aliceChosenBasis !== undefined) aliceChosenBasis = data.aliceChosenBasis;
+                if (data.bobChosenBasis !== undefined) bobChosenBasis = data.bobChosenBasis;
 
                 if (data.useRealHardware !== undefined && data.useRealHardware !== useRealHardware) {
                     setHardwareMode(data.useRealHardware, false);
+                }
+
+                // Sync inputs across windows
+                if (data.encoding !== undefined) {
+                    const encEl = document.getElementById('encodingSelect');
+                    if (encEl && encEl.value !== data.encoding) encEl.value = data.encoding;
+                }
+                if (data.aliceMsgText !== undefined) {
+                    const aMsgEl = document.getElementById('aliceMsgText');
+                    if (aMsgEl && aMsgEl.value !== data.aliceMsgText) {
+                        aMsgEl.value = data.aliceMsgText;
+                    }
+                }
+                if (data.bobMsgText !== undefined) {
+                    const bMsgEl = document.getElementById('bobMsgText');
+                    if (bMsgEl && bMsgEl.value !== data.bobMsgText) {
+                        bMsgEl.value = data.bobMsgText;
+                    }
                 }
 
                 updateBasisButtonUI('alice', aliceChosenBasis);
@@ -4453,6 +4525,12 @@
                 renderKeyDisplay('alice', aliceKey, bobKey);
                 renderKeyDisplay('bob', bobKey, aliceKey);
 
+                // Update Key Length numbers
+                const aKeyLenEl = document.getElementById('aliceKeyLen');
+                if (aKeyLenEl) aKeyLenEl.innerText = aliceKey.length;
+                const bKeyLenEl = document.getElementById('bobKeyLen');
+                if (bKeyLenEl) bKeyLenEl.innerText = bobKey.length;
+
                 // Update encrypted & received text displays
                 const aEncLabel = document.getElementById('aliceEncryptLabel');
                 if (aEncLabel) aEncLabel.innerText = aliceEncrypted ? "Encrypted ✓" : "Encrypt Msg";
@@ -4468,6 +4546,22 @@
                 const bEncBits = document.getElementById('bobEncryptedBits');
                 if (bEncText) bEncText.innerText = bobEncrypted ? (bobCiphertext || "[Cipher]") : "-";
                 if (bEncBits) bEncBits.innerText = bobEncrypted ? bobCiphertext : "-";
+
+                // Re-calculate Alice's message binary and required key length
+                const curMode = document.getElementById('encodingSelect')?.value || '5bit';
+                const curAliceText = document.getElementById('aliceMsgText')?.value || '';
+                const curAliceBits = textToBits(curAliceText, curMode);
+                const aGroup = (curMode === '5bit') ? 5 : 8;
+                let aFormatted = "";
+                for (let i = 0; i < curAliceBits.length; i += aGroup) {
+                    aFormatted += curAliceBits.substring(i, i + aGroup) + " ";
+                }
+                const aBitsEl = document.getElementById('aliceMsgBits');
+                if (aBitsEl) aBitsEl.innerText = aliceEncrypted ? (aliceCiphertext || "-") : (aFormatted.trim() || "-");
+                const aLenEl = document.getElementById('aliceMsgLen');
+                if (aLenEl) aLenEl.innerText = curAliceBits.length;
+                const aReqEl = document.getElementById('aliceReqKeyLen');
+                if (aReqEl) aReqEl.innerText = curAliceBits.length;
 
                 if (receivedByBob) {
                     const textPreview = bitsToText(receivedByBob.bits, receivedByBob.mode);
@@ -4487,6 +4581,47 @@
                     if (elLen) elLen.innerText = receivedByAlice.bits.length;
                     if (elText) elText.innerText = receivedByAlice.isEncrypted ? `[Encrypted: ${textPreview}]` : textPreview;
                 }
+
+                // Sync decrypted outputs if present
+                if (data.bobDecryptedText) {
+                    const bDecText = document.getElementById('bobDecryptedText');
+                    if (bDecText) bDecText.innerText = data.bobDecryptedText;
+                }
+                if (data.bobDecryptedBits) {
+                    const bDecBits = document.getElementById('bobDecryptedBits');
+                    if (bDecBits) bDecBits.innerText = data.bobDecryptedBits;
+                }
+                if (data.aliceDecryptedText) {
+                    const aDecText = document.getElementById('aliceDecryptedText');
+                    if (aDecText) aDecText.innerText = data.aliceDecryptedText;
+                }
+                if (data.aliceDecryptedBits) {
+                    const aDecBits = document.getElementById('aliceDecryptedBits');
+                    if (aDecBits) aDecBits.innerText = data.aliceDecryptedBits;
+                }
+
+                // Sync Key Used Badges
+                if (data.bobKeyUsed) {
+                    const bKeyUsed = document.getElementById('bobKeyUsedBadge');
+                    if (bKeyUsed) {
+                        bKeyUsed.innerText = data.bobKeyUsed;
+                        bKeyUsed.className = data.bobKeyUsed === "Yes"
+                            ? "px-1.5 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-700 font-mono"
+                            : "px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 font-mono";
+                    }
+                }
+                if (data.aliceKeyUsed) {
+                    const aKeyUsed = document.getElementById('aliceKeyUsedBadge');
+                    if (aKeyUsed) {
+                        aKeyUsed.innerText = data.aliceKeyUsed;
+                        aKeyUsed.className = data.aliceKeyUsed === "Yes"
+                            ? "px-1.5 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-700 font-mono"
+                            : "px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 font-mono";
+                    }
+                }
+
+                // Ensure key status badges are updated reflecting the true message/received length
+                updateKeyStatusBadges();
             }
         }
 
@@ -4566,7 +4701,13 @@
                     break;
                 case 'F7':
                     e.preventDefault();
-                    decryptMessage(targetUser);
+                    if (receivedByBob && !receivedByAlice) {
+                        decryptMessage('bob');
+                    } else if (receivedByAlice && !receivedByBob) {
+                        decryptMessage('alice');
+                    } else {
+                        decryptMessage(targetUser);
+                    }
                     break;
                 case 'F9':
                     e.preventDefault();
@@ -4603,6 +4744,26 @@
 
             // Start optical bench rendering loop
             requestAnimationFrame(drawOpticalBench);
+
+            // Fetch initial shared state from server for cross-machine / cross-browser sync
+            fetch('/api/session/state')
+                .then(r => r.json())
+                .then(state => {
+                    if (state && Object.keys(state).length > 0) {
+                        handleBroadcastMessage(state);
+                    }
+                }).catch(() => {});
+
+            // Periodic sync check across network / devices
+            setInterval(() => {
+                fetch('/api/session/state')
+                    .then(r => r.json())
+                    .then(state => {
+                        if (state && Object.keys(state).length > 0) {
+                            handleBroadcastMessage(state);
+                        }
+                    }).catch(() => {});
+            }, 1500);
 
             // Handle role URL parameter
             const params = new URLSearchParams(window.location.search);

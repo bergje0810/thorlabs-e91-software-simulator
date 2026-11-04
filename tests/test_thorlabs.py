@@ -95,3 +95,30 @@ def test_hardware_endpoints_and_ui():
     assert "bobDecryptedText" in html
     assert "clearLastPoint" in html
     assert "yKeyBit" in html
+
+
+def test_session_state_sync():
+    res_reset = client.post("/api/session/reset")
+    assert res_reset.status_code == 200
+
+    res_empty = client.get("/api/session/state")
+    assert res_empty.status_code == 200
+    assert res_empty.json() == {}
+
+    sample_state = {
+        "aliceKey": "1010101010101010",
+        "bobKey": "1010101010101010",
+        "aliceMsgText": "cat",
+        "receivedByBob": {"bits": "111000111000111", "isEncrypted": True, "mode": "5bit"},
+        "activeTurn": "bob"
+    }
+    res_post = client.post("/api/session/state", json=sample_state)
+    assert res_post.status_code == 200
+
+    res_get = client.get("/api/session/state")
+    assert res_get.status_code == 200
+    state = res_get.json()
+    assert state["aliceKey"] == "1010101010101010"
+    assert state["aliceMsgText"] == "cat"
+    assert state["receivedByBob"]["bits"] == "111000111000111"
+    assert state["activeTurn"] == "bob"

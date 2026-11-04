@@ -81,6 +81,27 @@ class DelaySweepRequest(BaseModel):
     integration_ms: float = 300.0
 
 
+# --- Shared Multi-Window / Multi-Machine Session State ---
+
+_shared_session_state: Dict[str, Any] = {}
+
+@app.get("/api/session/state")
+async def get_session_state():
+    return _shared_session_state
+
+@app.post("/api/session/state")
+async def update_session_state(state: Dict[str, Any]):
+    global _shared_session_state
+    _shared_session_state.update(state)
+    return {"status": "ok", "synced_keys": list(state.keys())}
+
+@app.post("/api/session/reset")
+async def reset_session_state():
+    global _shared_session_state
+    _shared_session_state.clear()
+    return {"status": "cleared"}
+
+
 # --- Quantum Protocol Endpoints ---
 
 @app.post("/api/phase1/chsh")
