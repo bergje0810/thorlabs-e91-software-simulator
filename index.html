@@ -183,6 +183,12 @@
                         <span>Setpoint: <strong id="laserSetpointReadout" class="text-purple-300">45.0 mA</strong></span>
                         <span>Measured: <strong id="laserActualReadout" class="text-emerald-400">0.0 mA</strong></span>
                     </div>
+                    <div class="pt-2 mt-1 border-t border-slate-800 flex items-center justify-between text-[11px]">
+                        <label class="flex items-center space-x-2 cursor-pointer select-none" title="By default, F1/F2 basis selection in software is blocked in Real Mode because waveplates are adjusted manually on the optical bench. Check this override to allow software F1/F2 basis selection.">
+                            <input type="checkbox" id="hwBasisOverrideToggle" class="accent-purple-500 rounded cursor-pointer" onchange="syncWithBroadcast()">
+                            <span class="text-slate-300 font-semibold">Allow F1 / F2 Basis Selection in Real Mode</span>
+                        </label>
+                    </div>
                 </div>
 
                 <!-- 3. Coincidence Window & Channel Delays (Settings.xml) -->
@@ -2207,7 +2213,12 @@
                 const pair = activePhotons[i];
                 pair.update();
                 pair.render(ctx);
-                if (!pair.alive) activePhotons.splice(i, 1);
+                if (!pair.alive) {
+                    activePhotons.splice(i, 1);
+                    if (activePhotons.length === 0) {
+                        isMeasurementInProgress = false;
+                    }
+                }
             }
 
             // 8. Render Click Ripples
@@ -2987,8 +2998,36 @@
             }
         }
 
+        let isMeasurementInProgress = false;
+
+        function isMeasurementBusy() {
+            return isMeasurementInProgress || (typeof activePhotons !== 'undefined' && activePhotons.length > 0 && !tourActive);
+        }
+
         // Basis selection handler
         async function handleBasisChoice(user, basis) {
+            // Block 1: Waiting on coincidence to happen / system progressing
+            if (isMeasurementBusy()) {
+                const benchEventText = document.getElementById('benchEventText');
+                if (benchEventText) {
+                    benchEventText.innerHTML = `<span class="text-amber-400 font-bold">⏳ Cannot change basis: waiting for coincidence measurement in progress...</span>`;
+                }
+                return;
+            }
+
+            // Block 2: In Real Measurement Mode, F1/F2 are blocked unless override is enabled
+            if (useRealHardware) {
+                const override = document.getElementById('hwBasisOverrideToggle')?.checked;
+                if (!override) {
+                    const benchEventText = document.getElementById('benchEventText');
+                    if (benchEventText) {
+                        benchEventText.innerHTML = `<span class="text-amber-400 font-bold">⚠️ F1/F2 locked in Real Hardware Mode (waveplates set manually). Enable override under Laser control to allow software selection.</span>`;
+                    }
+                    showLaserError("F1/F2 locked: In Real Mode, rotate waveplates manually or check 'Allow F1/F2 Basis Selection in Real Mode' under Laser control.");
+                    return;
+                }
+            }
+
             uncheckRandomBasis();
             if (user === 'alice') {
                 aliceChosenBasis = basis;
@@ -3374,6 +3413,7 @@
         }
 
         async function cancelHardwareWait() {
+            isMeasurementInProgress = false;
             try {
                 await fetch('/api/hardware/cancel-wait', { method: 'POST' });
             } catch (e) {
@@ -3578,6 +3618,7 @@
 
         // Trigger single photon pair measurement
         async function triggerSingleMeasurement(aliceB, bobB) {
+            isMeasurementInProgress = true;
             clearDetectorHighlights(); // Instantly clear previous detector highlight
             const errorRate = parseFloat(document.getElementById('errorRateSelect').value);
             const cancelBtn = document.getElementById('hwCancelWaitBtn');
@@ -3631,6 +3672,7 @@
                 }
 
                 if (ev.cancelled || ev.error) {
+                    isMeasurementInProgress = false;
                     if (coincidenceStatus) {
                         coincidenceStatus.innerHTML = `<span class="text-rose-400 font-bold">MEASUREMENT ABORTED</span>`;
                     }
@@ -3666,6 +3708,7 @@
 
                     triggerCoincidenceDisplay(ev);
                     updateHardwareExtrapolationBreakdown(ev);
+                    isMeasurementInProgress = false;
                 } else {
                     // Simulation Mode: Spawn animated photon pair travelling across the bench
                     activePhotons.push(new EntangledPair(ev));
@@ -3675,6 +3718,7 @@
                 updateStats();
                 syncWithBroadcast();
             } catch (err) {
+                isMeasurementInProgress = false;
                 console.error("Measurement error:", err);
                 if (cancelBtn) {
                     cancelBtn.classList.add('hidden');
@@ -3842,11 +3886,14 @@
                 container.innerHTML = "(None)";
                 return;
             }
+            const showAllToggle = document.getElementById(`${user}ShowAllToggle`);
+            const showAll = showAllToggle ? showAllToggle.checked : false;
+
             let html = "";
             for (let i = 0; i < myKey.length; i++) {
                 const bit = myKey[i];
                 const otherBit = otherKey ? otherKey[i] : null;
-                if (otherBit !== null && bit !== otherBit) {
+                if (showAll && otherBit !== null && bit !== otherBit) {
                     html += `<span class="bit-flip-badge" title="Bit flip error at bit #${i+1}">${bit}</span>`;
                 } else {
                     html += `<span class="${bit === '0' ? 'key-bit-0' : 'key-bit-1'}">${bit}</span>`;
@@ -4114,6 +4161,8 @@
                 if (leg) leg.innerHTML = `<span class="text-rose-400 font-bold">Bob</span>`;
             }
             bobChart.update('none');
+            renderKeyDisplay('alice', aliceKey, bobKey);
+            renderKeyDisplay('bob', bobKey, aliceKey);
         }
 
         function updateStats() {
@@ -4456,7 +4505,8 @@
                 aliceDecryptedText: document.getElementById('aliceDecryptedText')?.innerText || '-',
                 aliceDecryptedBits: document.getElementById('aliceDecryptedBits')?.innerText || '-',
                 aliceKeyUsed: document.getElementById('aliceKeyUsedBadge')?.innerText || 'No',
-                bobKeyUsed: document.getElementById('bobKeyUsedBadge')?.innerText || 'No'
+                bobKeyUsed: document.getElementById('bobKeyUsedBadge')?.innerText || 'No',
+                hwBasisOverride: document.getElementById('hwBasisOverrideToggle')?.checked || false
             };
             if (broadcast) {
                 try { broadcast.postMessage(payload); } catch (e) {}
@@ -4492,6 +4542,12 @@
 
                 if (data.useRealHardware !== undefined && data.useRealHardware !== useRealHardware) {
                     setHardwareMode(data.useRealHardware, false);
+                }
+                if (data.hwBasisOverride !== undefined) {
+                    const ovEl = document.getElementById('hwBasisOverrideToggle');
+                    if (ovEl && ovEl.checked !== data.hwBasisOverride) {
+                        ovEl.checked = data.hwBasisOverride;
+                    }
                 }
 
                 // Sync inputs across windows
