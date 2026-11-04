@@ -450,7 +450,7 @@
                     <div class="flex items-center space-x-2">
                         <span class="text-slate-400 font-bold uppercase">Software Turn:</span>
                         <span id="turnIndicator" class="px-3 py-1 rounded-full text-xs font-black uppercase tracking-wide bg-blue-500/20 text-blue-400 border border-blue-500/40">
-                            Alice's Turn (Press F12 to Yield)
+                            Alice's Turn
                         </span>
                     </div>
                     <span class="text-slate-500 hidden sm:inline">|</span>
@@ -4218,7 +4218,7 @@
             const bobTurnBar = document.getElementById('bobTurnBar');
 
             if (turn === 'alice') {
-                indicator.innerText = "Alice's Turn (F12 to Yield)";
+                indicator.innerText = "Alice's Turn";
                 indicator.className = "px-3 py-1 rounded-full text-xs font-black uppercase tracking-wide bg-blue-500/20 text-blue-400 border border-blue-500/40";
                 aliceWin.classList.add('active-turn');
                 bobWin.classList.remove('active-turn');
@@ -4235,7 +4235,7 @@
                     bobTurnBar.className = "w-full py-1 px-3 rounded text-center font-mono font-black text-xs uppercase tracking-wider bg-rose-500/20 text-rose-300 border border-rose-500/40";
                 }
             } else {
-                indicator.innerText = "Bob's Turn (F12 to Yield)";
+                indicator.innerText = "Bob's Turn";
                 indicator.className = "px-3 py-1 rounded-full text-xs font-black uppercase tracking-wide bg-rose-500/20 text-rose-400 border border-rose-500/40";
                 bobWin.classList.add('active-turn');
                 aliceWin.classList.remove('active-turn');
