@@ -405,15 +405,19 @@
             <div id="tutorialSpotlight" class="fixed pointer-events-none rounded-xl border-2 border-cyan-400 shadow-[0_0_25px_rgba(34,211,238,0.7),inset_0_0_15px_rgba(34,211,238,0.2)] ring-4 ring-cyan-500/20 z-40 hidden" style="transition: none !important;"></div>
             <div id="tutorialSpotlight2" class="fixed pointer-events-none rounded-xl border-2 border-rose-400 shadow-[0_0_25px_rgba(244,63,94,0.7),inset_0_0_15px_rgba(244,63,94,0.2)] ring-4 ring-rose-500/20 z-40 hidden" style="transition: none !important;"></div>
 
-            <div id="tutorialHud" class="fixed pointer-events-auto w-[360px] sm:w-[420px] bg-slate-900/95 border-2 border-cyan-500/80 rounded-2xl p-4 shadow-[0_15px_40px_rgba(0,0,0,0.85),0_0_30px_rgba(6,182,212,0.35)] backdrop-blur-xl text-slate-100 flex flex-col space-y-3 z-50">
-                <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+            <div id="tutorialHud" class="fixed pointer-events-auto w-[360px] sm:w-[420px] bg-slate-900/95 border-2 border-cyan-500/80 rounded-2xl p-4 shadow-[0_15px_40px_rgba(0,0,0,0.85),0_0_30px_rgba(6,182,212,0.35)] backdrop-blur-xl text-slate-100 flex flex-col space-y-3 z-50" style="bottom: 24px; right: 24px;">
+                <div id="tutorialHudHeader" class="flex items-center justify-between border-b border-slate-800 pb-2 cursor-grab active:cursor-grabbing select-none" title="Drag to move guide window">
                     <div class="flex items-center space-x-2">
+                        <span class="text-slate-500 hover:text-slate-300 text-xs mr-0.5 cursor-grab">⋮⋮</span>
                         <span class="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-cyan-500/20 text-cyan-300 border border-cyan-500/40" id="tourStepBadge">
                             Step 1 / 8
                         </span>
                         <span class="text-xs font-bold text-slate-400" id="tourCategory">SPDC Source</span>
                     </div>
-                    <button class="text-slate-400 hover:text-white text-sm px-1.5 py-0.5 rounded hover:bg-slate-800" onclick="closeInteractiveGuide()" title="Close Tour (Esc)">✕</button>
+                    <div class="flex items-center space-x-2">
+                        <span class="text-[10px] text-slate-500 font-medium select-none hidden sm:inline">drag to move</span>
+                        <button class="text-slate-400 hover:text-white text-sm px-1.5 py-0.5 rounded hover:bg-slate-800 cursor-pointer" onclick="closeInteractiveGuide()" title="Close Tour (Esc)">✕</button>
+                    </div>
                 </div>
 
                 <div>
@@ -1328,6 +1332,8 @@
                 errSel.value = '0.0'; // 0% error rate during guided tutorial for clean determinism!
             }
             tourActive = true;
+            resetTourHudPosition();
+            initTourHudDraggable();
             const overlay = document.getElementById('tutorialOverlay');
             if (overlay) overlay.classList.remove('hidden');
             const guideBtn = document.getElementById('toggleGuideBtn');
@@ -1501,54 +1507,117 @@
                 if (s2) s2.classList.add('hidden');
             }
 
-            if (firstTargetForHud) {
-                positionTourCard(firstTargetForHud);
+        }
+
+        function resetTourHudPosition() {
+            const hud = document.getElementById('tutorialHud');
+            if (!hud) return;
+            hud.style.top = 'auto';
+            hud.style.bottom = '24px';
+            hud.style.left = 'auto';
+            hud.style.right = '24px';
+        }
+
+        function clampTourHudToViewport() {
+            const hud = document.getElementById('tutorialHud');
+            if (!hud) return;
+            const rect = hud.getBoundingClientRect();
+            const vpW = window.innerWidth;
+            const vpH = window.innerHeight;
+            if (hud.style.left && hud.style.left !== 'auto') {
+                let left = parseFloat(hud.style.left);
+                let top = parseFloat(hud.style.top);
+                left = Math.max(10, Math.min(vpW - rect.width - 10, left));
+                top = Math.max(10, Math.min(vpH - rect.height - 10, top));
+                hud.style.left = `${left}px`;
+                hud.style.top = `${top}px`;
             }
         }
 
-        function positionTourCard(rect) {
+        let hudDragState = {
+            isDragging: false,
+            startX: 0,
+            startY: 0,
+            initialLeft: 0,
+            initialTop: 0
+        };
+
+        function initTourHudDraggable() {
             const hud = document.getElementById('tutorialHud');
-            if (!hud || !rect) return;
+            const header = document.getElementById('tutorialHudHeader');
+            if (!hud || hud.dataset.dragInitialized) return;
+            hud.dataset.dragInitialized = "true";
 
-            const hudWidth = hud.offsetWidth || 400;
-            const hudHeight = hud.offsetHeight || 260;
-            const vpWidth = window.innerWidth;
-            const vpHeight = window.innerHeight;
+            const dragHandle = header || hud;
 
-            let targetInBottomRight = (rect.right > (vpWidth - hudWidth - 30)) && (rect.bottom > (vpHeight - hudHeight - 30));
-            let targetInBottomLeft = (rect.left < hudWidth + 30) && (rect.bottom > (vpHeight - hudHeight - 30));
-
-            const s2 = document.getElementById('tutorialSpotlight2');
-            if (s2 && !s2.classList.contains('hidden')) {
-                const s2Rect = s2.getBoundingClientRect();
-                if ((s2Rect.right > (vpWidth - hudWidth - 30)) && (s2Rect.bottom > (vpHeight - hudHeight - 30))) {
-                    targetInBottomRight = true;
+            const onStart = (e) => {
+                if (e.target.closest('button') || e.target.closest('input') || e.target.closest('a') || e.target.closest('#tourDots')) {
+                    return;
                 }
-                if ((s2Rect.left < hudWidth + 30) && (s2Rect.bottom > (vpHeight - hudHeight - 30))) {
-                    targetInBottomLeft = true;
-                }
-            }
+                hudDragState.isDragging = true;
+                const clientX = (e.clientX !== undefined) ? e.clientX : e.touches?.[0]?.clientX;
+                const clientY = (e.clientY !== undefined) ? e.clientY : e.touches?.[0]?.clientY;
+                if (clientX === undefined || clientY === undefined) return;
+                hudDragState.startX = clientX;
+                hudDragState.startY = clientY;
 
-            if (targetInBottomRight && targetInBottomLeft) {
-                // Both bottom areas have highlights (e.g. Step 4 Alice & Bob basis buttons)
-                // Position HUD at top-right below navigation bar so controls are visible!
-                hud.style.top = '70px';
+                const rect = hud.getBoundingClientRect();
+                hudDragState.initialLeft = rect.left;
+                hudDragState.initialTop = rect.top;
+
+                hud.style.left = `${rect.left}px`;
+                hud.style.top = `${rect.top}px`;
                 hud.style.bottom = 'auto';
-                hud.style.left = 'auto';
-                hud.style.right = '20px';
-            } else if (targetInBottomRight) {
-                // Move HUD to bottom-left
-                hud.style.top = 'auto';
-                hud.style.bottom = '20px';
-                hud.style.left = '20px';
                 hud.style.right = 'auto';
-            } else {
-                // Default bottom-right corner
-                hud.style.top = 'auto';
-                hud.style.bottom = '20px';
-                hud.style.left = 'auto';
-                hud.style.right = '20px';
-            }
+
+                document.body.classList.add('select-none');
+                if (header) {
+                    header.classList.remove('cursor-grab');
+                    header.classList.add('cursor-grabbing');
+                }
+            };
+
+            const onMove = (e) => {
+                if (!hudDragState.isDragging) return;
+                const clientX = (e.clientX !== undefined) ? e.clientX : e.touches?.[0]?.clientX;
+                const clientY = (e.clientY !== undefined) ? e.clientY : e.touches?.[0]?.clientY;
+                if (clientX === undefined || clientY === undefined) return;
+
+                const dx = clientX - hudDragState.startX;
+                const dy = clientY - hudDragState.startY;
+
+                const hudW = hud.offsetWidth || 400;
+                const hudH = hud.offsetHeight || 300;
+                const vpW = window.innerWidth;
+                const vpH = window.innerHeight;
+
+                let newLeft = hudDragState.initialLeft + dx;
+                let newTop = hudDragState.initialTop + dy;
+
+                newLeft = Math.max(10, Math.min(vpW - hudW - 10, newLeft));
+                newTop = Math.max(10, Math.min(vpH - hudH - 10, newTop));
+
+                hud.style.left = `${newLeft}px`;
+                hud.style.top = `${newTop}px`;
+            };
+
+            const onEnd = () => {
+                if (!hudDragState.isDragging) return;
+                hudDragState.isDragging = false;
+                document.body.classList.remove('select-none');
+                if (header) {
+                    header.classList.remove('cursor-grabbing');
+                    header.classList.add('cursor-grab');
+                }
+            };
+
+            dragHandle.addEventListener('mousedown', onStart);
+            window.addEventListener('mousemove', onMove);
+            window.addEventListener('mouseup', onEnd);
+
+            dragHandle.addEventListener('touchstart', onStart, { passive: true });
+            window.addEventListener('touchmove', onMove, { passive: true });
+            window.addEventListener('touchend', onEnd);
         }
 
         function updateNextButtonState() {
@@ -1611,6 +1680,7 @@
                 if (step) {
                     positionTourHud(step.targetId);
                 }
+                clampTourHudToViewport();
             }
         });
         window.addEventListener('scroll', () => {
