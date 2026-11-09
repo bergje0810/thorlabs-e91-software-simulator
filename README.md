@@ -1,6 +1,13 @@
-# Thorlabs EDU-QOP1 & EDU-QOPA1 — E91 QKD Simulator
+# Thorlabs EDU-QOP1 & EDU-QOPA1 — 2-Basis E91 Quantum Key Distribution Protocol (BBM92)
 
-An interactive quantum optics laboratory simulator and hardware interface for Artur Ekert's 1991 Bell-inequality Quantum Key Distribution (E91) protocol, modeled directly after **Thorlabs EDU-QOP1(/M) & EDU-QOPA1(/M)** Experiment 25.4.
+An interactive quantum optics laboratory simulator and hardware interface for Artur Ekert's 1991 Bell-inequality Quantum Key Distribution protocol (implemented in its standard educational 2-basis BBM92 variant), modeled directly after **Thorlabs EDU-QOP1(/M) & EDU-QOPA1(/M)** Experiment 25.4.
+
+> **Note on Protocol Variant (Simplified 2-Basis E91 / BBM92)**:
+> The original Artur Ekert protocol (E91, 1991) utilizes three distinct analyzer orientations per party to test Bell's CHSH inequality ($S \le 2$), validating non-locality and detecting potential eavesdroppers. In educational quantum optics kits such as Thorlabs EDU-QOP1 Experiment 25.4 and the Bennett-Brassard-Mermin 1992 (BBM92) protocol, a simplified 2-basis scheme is used:
+> - **Rectilinear Basis (0° / 90°, HWP at 0°)**: Detectors reflect/transmit horizontal (0°, Bit 0) and vertical (90°, Bit 1) polarizations.
+> - **Diagonal Basis (-45° / 45°, HWP at 22.5°)**: Detectors evaluate rotated linear polarization states.
+>
+> When both parties choose matching bases, quantum entanglement guarantees perfectly correlated measurement outcomes for key generation. Eavesdropping and channel noise are monitored directly via Quantum Bit Error Rate (QBER) and statistical verification.
 
 ---
 

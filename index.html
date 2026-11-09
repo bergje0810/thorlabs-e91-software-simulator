@@ -711,25 +711,8 @@
                         </div>
                     </div>
 
-                    <!-- Bob Message & Key Fields -->
+                    <!-- Bob Key & Received Message Fields (Bob is Receiver Only) -->
                     <div class="space-y-1.5 text-xs">
-                        <div id="bobMsgCard" class="bg-slate-900/70 p-2 rounded-xl border border-slate-800">
-                            <div class="flex justify-between items-center mb-1">
-                                <span class="font-bold text-slate-300">My Message (Optional):</span>
-                                <span class="text-slate-500 text-[11px]">Required Key Length: <strong id="bobMsgLen" class="text-slate-400 font-mono">0</strong> bits</span>
-                            </div>
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-1.5">
-                                <input type="text" id="bobMsgText" value="" placeholder="Optional message from Bob" class="bg-slate-800 border border-slate-700 rounded-lg py-1 px-2 font-mono text-white text-xs focus:outline-none focus:border-rose-500" oninput="updateBobMessageBits()">
-                                <div id="bobMsgBits" class="md:col-span-2 bg-slate-950/80 py-1 px-2 rounded-lg border border-slate-800 font-mono text-[11px] text-slate-500 break-all flex items-center min-h-[28px]">
-                                    -
-                                </div>
-                            </div>
-                            <div class="text-[10px] text-slate-400 mt-1 flex flex-wrap items-center justify-between gap-1">
-                                <span>Key length must be &ge; Message length.</span>
-                                <span>Rec. Measurements: <strong id="bobRecPairsBadge" class="text-rose-400 font-mono">20</strong> pairs</span>
-                            </div>
-                        </div>
-
                         <div class="bg-slate-900/70 p-2 rounded-xl border border-slate-800">
                             <div class="flex flex-wrap justify-between items-center mb-1 gap-1">
                                 <span class="font-bold text-emerald-400">My Key (Sifted):</span>
@@ -746,25 +729,9 @@
                             </div>
                         </div>
 
-                        <!-- Bob Encrypted Message -->
                         <div class="bg-slate-900/70 p-2 rounded-xl border border-slate-800">
                             <div class="flex justify-between items-center mb-0.5">
-                                <span class="font-bold text-amber-400">Encrypted Message:</span>
-                                <span class="text-slate-500 text-[10px]">XOR Ciphertext [F5]</span>
-                            </div>
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-1.5">
-                                <div id="bobEncryptedText" class="bg-slate-950/80 py-1 px-2 rounded-lg border border-slate-800 font-mono text-amber-300 font-bold text-xs flex items-center min-h-[28px]">
-                                    -
-                                </div>
-                                <div id="bobEncryptedBits" class="md:col-span-2 bg-slate-950/80 py-1 px-2 rounded-lg border border-slate-800 font-mono text-[11px] text-amber-200/80 break-all flex items-center min-h-[28px]">
-                                    -
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="bg-slate-900/70 p-2 rounded-xl border border-slate-800">
-                            <div class="flex justify-between items-center mb-0.5">
-                                <span class="font-bold text-purple-400">Received Message:</span>
+                                <span class="font-bold text-purple-400">Received Message (from Alice):</span>
                                 <span class="text-slate-500 text-[11px]">Required Key Length: <strong id="bobRecvLen" class="text-purple-400 font-mono">0</strong> bits</span>
                             </div>
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-1.5">
@@ -809,7 +776,7 @@
                                 <span>-45|45</span>
                                 <span class="text-[9px] text-rose-200">(F2) HWP 22.5°</span>
                             </button>
-                            <button id="bobF3" class="bg-slate-800 hover:bg-slate-700 py-1 px-1.5 rounded-lg text-xs font-bold text-slate-200 border border-slate-700 flex flex-col items-center" onclick="filterByBases()">
+                            <button id="bobF3" class="bg-slate-800 hover:bg-slate-700 py-1 px-1.5 rounded-lg text-xs font-bold text-slate-200 border border-slate-700 flex flex-col items-center" onclick="filterByBases('bob')">
                                 <span>Filter by Bases</span>
                                 <span class="text-[9px] text-slate-400">(F3) Sift</span>
                             </button>
@@ -822,15 +789,7 @@
                                 <span class="text-[9px] text-slate-400">(F9) Undo Pair</span>
                             </button>
                         </div>
-                        <div class="grid grid-cols-2 sm:grid-cols-5 gap-1.5">
-                            <button id="bobF5" class="bg-rose-600 hover:bg-rose-500 py-1 px-1.5 rounded-lg text-xs font-bold text-white shadow flex flex-col items-center" onclick="toggleEncryptMessage('bob')">
-                                <span id="bobEncryptLabel">Encrypt Msg</span>
-                                <span class="text-[9px] text-rose-200">(F5) Bitwise XOR</span>
-                            </button>
-                            <button id="bobF6" class="bg-rose-600 hover:bg-rose-500 py-1 px-1.5 rounded-lg text-xs font-bold text-white shadow flex flex-col items-center" onclick="sendMessage('bob')">
-                                <span>Send Message</span>
-                                <span class="text-[9px] text-rose-200">(F6) Public Ch.</span>
-                            </button>
+                        <div class="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
                             <button id="bobF7" class="bg-rose-600 hover:bg-rose-500 py-1 px-1.5 rounded-lg text-xs font-bold text-white shadow flex flex-col items-center" onclick="decryptMessage('bob')">
                                 <span id="bobDecryptLabel">Decrypt Msg</span>
                                 <span class="text-[9px] text-rose-200">(F7) Bitwise XOR</span>
@@ -856,12 +815,22 @@
     <!-- JAVASCRIPT: SIMULATOR LOGIC, BENCH ANIMATION & STEP-BY-STEP GUIDE     -->
     <!-- ===================================================================== -->
     <script>
+        // Check for Popout Mode
+        const urlParams = new URLSearchParams(window.location.search);
+        const isPopout = urlParams.get('popout') === 'true' || urlParams.get('role') === 'bob';
+        if (isPopout) {
+            document.body.classList.add('is-popout');
+        }
+
         // --- State Management ---
         let activeTurn = 'alice'; // 'alice' or 'bob'
         let aliceChosenBasis = null; // '0|90' or '-45|45'
         let bobChosenBasis = null;
         let events = []; // List of all recorded photon events
+        let aliceFiltered = false;
+        let bobFiltered = false;
         let isFiltered = false;
+        let currentViewMode = isPopout ? 'bob' : 'alice';
         let aliceKey = "";
         let bobKey = "";
         let aliceEncrypted = false;
@@ -4506,6 +4475,7 @@
 
         // View Mode Handlers
         function setViewMode(mode) {
+            currentViewMode = mode;
             currentRole = (mode === 'alice') ? 'alice' : ((mode === 'bob') ? 'bob' : null);
             const aliceWin = document.getElementById('aliceWindow');
             const bobWin = document.getElementById('bobWindow');
@@ -4513,21 +4483,21 @@
             const toggleBenchBtn = document.getElementById('toggleBenchBtn');
             const container = document.getElementById('windowsContainer');
 
-            document.getElementById('viewDualBtn').className = (mode === 'dual') ? "px-2.5 py-1 rounded bg-blue-600 text-white font-bold" : "px-2.5 py-1 rounded text-slate-400 hover:text-white";
-            document.getElementById('viewAliceBtn').className = (mode === 'alice') ? "px-2.5 py-1 rounded bg-blue-600 text-white font-bold" : "px-2.5 py-1 rounded text-slate-400 hover:text-white";
-            document.getElementById('viewBobBtn').className = (mode === 'bob') ? "px-2.5 py-1 rounded bg-blue-600 text-white font-bold" : "px-2.5 py-1 rounded text-slate-400 hover:text-white";
+            document.getElementById('viewDualBtn').className = (mode === 'dual') ? "px-2.5 py-1 rounded bg-blue-600 text-white font-bold" : "px-2.5 py-1 rounded text-slate-400 hover:text-white font-bold";
+            document.getElementById('viewAliceBtn').className = (mode === 'alice') ? "px-2.5 py-1 rounded bg-blue-600 text-white font-bold" : "px-2.5 py-1 rounded text-slate-400 hover:text-white font-bold";
+            document.getElementById('viewBobBtn').className = (mode === 'bob') ? "px-2.5 py-1 rounded bg-blue-600 text-white font-bold" : "px-2.5 py-1 rounded text-slate-400 hover:text-white font-bold";
 
             if (mode === 'dual') {
                 aliceWin.classList.remove('hidden');
                 bobWin.classList.remove('hidden');
-                if (benchSec) benchSec.classList.remove('hidden');
+                if (benchSec && !isPopout) benchSec.classList.remove('hidden');
                 if (toggleBenchBtn) toggleBenchBtn.classList.add('hidden');
                 container.className = "grid grid-cols-1 lg:grid-cols-2 gap-3";
             } else if (mode === 'alice') {
                 aliceWin.classList.remove('hidden');
                 bobWin.classList.add('hidden');
                 if (benchSec) benchSec.classList.add('hidden');
-                if (toggleBenchBtn) {
+                if (toggleBenchBtn && !isPopout) {
                     toggleBenchBtn.classList.remove('hidden');
                     toggleBenchBtn.className = "px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 border border-slate-700 font-bold";
                 }
@@ -4536,16 +4506,17 @@
                 aliceWin.classList.add('hidden');
                 bobWin.classList.remove('hidden');
                 if (benchSec) benchSec.classList.add('hidden');
-                if (toggleBenchBtn) {
+                if (toggleBenchBtn && !isPopout) {
                     toggleBenchBtn.classList.remove('hidden');
                     toggleBenchBtn.className = "px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 border border-slate-700 font-bold";
                 }
                 container.className = "grid grid-cols-1 gap-3";
             }
+            updateQberVisibility();
         }
 
         function openPopoutBob() {
-            window.open('index.html?role=bob', 'BobWindow', 'width=900,height=850');
+            window.open('index.html?popout=true', 'BobWindow', 'width=950,height=850');
             setViewMode('alice');
             syncWithBroadcast();
         }
