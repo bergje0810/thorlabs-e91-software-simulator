@@ -4559,7 +4559,7 @@
         function openPopoutBob() {
             syncWithBroadcast();
             setViewMode('alice');
-            window.open('index.html?popout=true', 'BobWindow', 'width=950,height=850');
+            window.open('index.html?popout=true&t=' + Date.now(), 'BobWindow', 'width=950,height=850');
         }
 
         function syncWithBroadcast() {
@@ -4604,6 +4604,7 @@
                 syncWithBroadcast();
                 return;
             }
+            if (!isPopout) return; // Main window is authoritative; never overwrite hardware mode, laser, or events
             if (data.type === 'SYNC_STATE' || data.events !== undefined) {
                 if (data.events !== undefined) events = data.events || [];
                 if (data.aliceFiltered !== undefined) aliceFiltered = !!data.aliceFiltered;
