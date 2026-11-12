@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Thorlabs EDU-QOP1 & EDU-QOPA1 — E91 QKD Interactive Lab Simulator</title>
+    <title>Thorlabs EDU-QOP1 & EDU-QOPA1 — 2-Basis E91 Quantum Key Distribution Protocol (BBM92)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -59,6 +59,17 @@
         canvas#benchCanvas {
             cursor: crosshair;
         }
+        body.is-popout #headerHwModeGroup,
+        body.is-popout #toggleBenchBtn,
+        body.is-popout #popoutBtn,
+        body.is-popout #toggleGuideBtn,
+        body.is-popout #hardwareSetupSection,
+        body.is-popout #benchSection,
+        body.is-popout #telemetryBar,
+        body.is-popout #interactiveGuideHud,
+        body.is-popout #spotlightOverlay {
+            display: none !important;
+        }
     </style>
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen font-sans selection:bg-blue-600 selection:text-white relative">
@@ -67,14 +78,14 @@
     <header class="bg-slate-900/90 border-b border-slate-800 px-4 py-1.5 sticky top-0 z-50 backdrop-blur-md flex flex-wrap items-center justify-between gap-2">
         <div class="flex items-center space-x-2">
             <h1 class="text-sm sm:text-base font-bold text-white tracking-tight">
-                E91 Quantum Key Distribution Protocol
+                2-Basis E91 Quantum Key Distribution Protocol (BBM92)
             </h1>
         </div>
 
         <!-- Quick Toolbar Controls -->
         <div class="flex flex-wrap items-center gap-1.5 text-xs">
-            <!-- Hardware vs Simulation Mode Switch -->
-            <div class="bg-slate-800 p-0.5 rounded-lg border border-slate-700 flex items-center">
+            <!-- Hardware vs Simulation Mode Switch (Hidden in Popout) -->
+            <div id="headerHwModeGroup" class="bg-slate-800 p-0.5 rounded-lg border border-slate-700 flex items-center">
                 <button id="modeSimBtn" class="px-2.5 py-1 rounded bg-blue-600 text-white font-bold flex items-center space-x-1 transition-all" onclick="setHardwareMode(false)">
                     <span>🧪 Simulation</span>
                 </button>
@@ -88,16 +99,16 @@
                 </div>
             </div>
 
-            <!-- View Selector -->
-            <div class="bg-slate-800 p-0.5 rounded-lg border border-slate-700 flex">
-                <button id="viewDualBtn" class="px-2.5 py-1 rounded bg-blue-600 text-white font-bold" onclick="setViewMode('dual')">Dual View</button>
-                <button id="viewAliceBtn" class="px-2.5 py-1 rounded text-slate-400 hover:text-white" onclick="setViewMode('alice')">Alice View</button>
-                <button id="viewBobBtn" class="px-2.5 py-1 rounded text-slate-400 hover:text-white" onclick="setViewMode('bob')">Bob View</button>
+            <!-- View Selector (Always visible in Main & Popout) -->
+            <div id="headerViewSelector" class="bg-slate-800 p-0.5 rounded-lg border border-slate-700 flex">
+                <button id="viewDualBtn" class="px-2.5 py-1 rounded text-slate-400 hover:text-white font-bold" onclick="setViewMode('dual')">Dual View</button>
+                <button id="viewAliceBtn" class="px-2.5 py-1 rounded bg-blue-600 text-white font-bold" onclick="setViewMode('alice')">Alice View</button>
+                <button id="viewBobBtn" class="px-2.5 py-1 rounded text-slate-400 hover:text-white font-bold" onclick="setViewMode('bob')">Bob View</button>
             </div>
             <button id="toggleBenchBtn" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 font-bold hidden" onclick="toggleBenchVisibility()">
                 🔬 Optical Bench
             </button>
-            <button class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 font-bold" onclick="openPopoutBob()">
+            <button id="popoutBtn" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 font-bold" onclick="openPopoutBob()">
                 ⧉ Dual Screen Pop-Out
             </button>
             <button id="toggleGuideBtn" class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold shadow transition-all flex items-center space-x-1" onclick="toggleInteractiveGuide()">
@@ -182,12 +193,6 @@
                     <div class="flex justify-between text-[11px] font-mono text-slate-400 pt-0.5">
                         <span>Setpoint: <strong id="laserSetpointReadout" class="text-purple-300">45.0 mA</strong></span>
                         <span>Measured: <strong id="laserActualReadout" class="text-emerald-400">0.0 mA</strong></span>
-                    </div>
-                    <div class="pt-2 mt-1 border-t border-slate-800 flex items-center justify-between text-[11px]">
-                        <label class="flex items-center space-x-2 cursor-pointer select-none" title="By default, F1/F2 basis selection in software is blocked in Real Mode because waveplates are adjusted manually on the optical bench. Check this override to allow software F1/F2 basis selection.">
-                            <input type="checkbox" id="hwBasisOverrideToggle" class="accent-purple-500 rounded cursor-pointer" onchange="syncWithBroadcast()">
-                            <span class="text-slate-300 font-semibold">Allow F1 / F2 Basis Selection in Real Mode</span>
-                        </label>
                     </div>
                 </div>
 
@@ -455,7 +460,7 @@
         <!-- ================================================================= -->
         <section class="space-y-4">
             <!-- Global Status Bar -->
-            <div class="glass-panel p-3.5 rounded-xl flex flex-wrap items-center justify-between gap-3 text-xs">
+            <div id="telemetryBar" class="glass-panel p-3.5 rounded-xl flex flex-wrap items-center justify-between gap-3 text-xs">
                 <div class="flex flex-wrap items-center gap-3">
                     <div class="flex items-center space-x-2">
                         <span class="text-slate-400 font-bold uppercase">Software Turn:</span>
@@ -475,8 +480,8 @@
                     <span class="text-slate-500 hidden sm:inline">|</span>
                     <span class="text-slate-400 hidden sm:inline">
                         Pairs Measured: <strong id="statTotalPairs" class="font-mono text-white">0</strong> |
-                        Sifted Bits: <strong id="statSiftedBits" class="font-mono text-emerald-400">0</strong> |
-                        QBER: <strong id="statQber" class="font-mono text-amber-400">0.0%</strong>
+                        Sifted Bits: <strong id="statSiftedBits" class="font-mono text-emerald-400">0</strong>
+                        <span id="statQberWrapper" class="hidden"> | QBER: <strong id="statQber" class="font-mono text-amber-400">0.0%</strong></span>
                     </span>
                 </div>
 
@@ -642,7 +647,7 @@
                                 <span>-45|45</span>
                                 <span class="text-[9px] text-blue-200">(F2) HWP 22.5°</span>
                             </button>
-                            <button id="aliceF3" class="bg-slate-800 hover:bg-slate-700 py-1 px-1.5 rounded-lg text-xs font-bold text-slate-200 border border-slate-700 flex flex-col items-center" onclick="filterByBases()">
+                            <button id="aliceF3" class="bg-slate-800 hover:bg-slate-700 py-1 px-1.5 rounded-lg text-xs font-bold text-slate-200 border border-slate-700 flex flex-col items-center" onclick="filterByBases('alice')">
                                 <span>Filter by Bases</span>
                                 <span class="text-[9px] text-slate-400">(F3) Sift</span>
                             </button>
@@ -2946,13 +2951,9 @@
             // If Bob has NOT received a message yet:
             //   - if Bob entered a message in bobMsgText, use Bob's message length
             //   - else use Alice's message length (the target message being transmitted)
-            const rawBobText = document.getElementById('bobMsgText')?.value || "";
-            const bobMsgBits = textToBits(rawBobText, mode);
             let bReqLen;
             if (receivedByBob && receivedByBob.bits) {
                 bReqLen = receivedByBob.bits.length;
-            } else if (bobMsgBits.length > 0) {
-                bReqLen = bobMsgBits.length;
             } else {
                 bReqLen = aliceMsgBits.length;
             }
@@ -3052,19 +3053,6 @@
                     benchEventText.innerHTML = `<span class="text-amber-400 font-bold">⏳ Cannot change basis: waiting for coincidence measurement in progress...</span>`;
                 }
                 return;
-            }
-
-            // Block 2: In Real Measurement Mode, F1/F2 are blocked unless override is enabled
-            if (useRealHardware) {
-                const override = document.getElementById('hwBasisOverrideToggle')?.checked;
-                if (!override) {
-                    const benchEventText = document.getElementById('benchEventText');
-                    if (benchEventText) {
-                        benchEventText.innerHTML = `<span class="text-amber-400 font-bold">⚠️ F1/F2 locked in Real Hardware Mode (waveplates set manually). Enable override under Laser control to allow software selection.</span>`;
-                    }
-                    showLaserError("F1/F2 locked: In Real Mode, rotate waveplates manually or check 'Allow F1/F2 Basis Selection in Real Mode' under Laser control.");
-                    return;
-                }
             }
 
             uncheckRandomBasis();
@@ -3726,6 +3714,8 @@
 
                 ev.index = events.length + 1;
                 events.push(ev);
+                aliceFiltered = false;
+                bobFiltered = false;
                 isFiltered = false;
 
                 if (useRealHardware) {
@@ -3857,6 +3847,8 @@
                 });
                 const data = await res.json();
                 events = data.events;
+                aliceFiltered = false;
+                bobFiltered = false;
                 isFiltered = false;
                 aliceKey = "";
                 bobKey = "";
@@ -3882,39 +3874,59 @@
             }
         }
 
-        // Basis Filtering (Sifting) [F3]
-        function filterByBases() {
+        // Basis Filtering (Sifting) [F3] - Independent per user
+        function filterByBases(user) {
             if (events.length === 0) {
                 alert("Please measure some photon pairs before filtering by bases!");
                 return;
             }
-            isFiltered = true;
+            const target = user || activeTurn;
+            if (target === 'alice') {
+                aliceFiltered = true;
+            } else if (target === 'bob') {
+                bobFiltered = true;
+            } else {
+                aliceFiltered = true;
+                bobFiltered = true;
+            }
+            isFiltered = aliceFiltered && bobFiltered;
             updateCharts();
             updateStats();
             syncWithBroadcast();
         }
 
-        // Calculate Key [F4]
+        // Calculate Key [F4] - Independent per user
         function calculateKey(user) {
             const matching = events.filter(e => e.basis_match);
             if (matching.length === 0) {
                 alert("No matching basis events found to calculate key!");
                 return;
             }
-            aliceKey = matching.map(e => e.alice_bit).join('');
-            bobKey = matching.map(e => e.bob_bit).join('');
+            const target = user || activeTurn;
+            if (target === 'alice') {
+                aliceKey = matching.map(e => e.alice_bit).join('');
+                const aKeyLenEl = document.getElementById('aliceKeyLen');
+                if (aKeyLenEl) aKeyLenEl.innerText = aliceKey.length;
+                const aKeyUsed = document.getElementById('aliceKeyUsedBadge');
+                if (aKeyUsed) { aKeyUsed.innerText = "No"; aKeyUsed.className = "px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 font-mono"; }
+            } else if (target === 'bob') {
+                bobKey = matching.map(e => e.bob_bit).join('');
+                const bKeyLenEl = document.getElementById('bobKeyLen');
+                if (bKeyLenEl) bKeyLenEl.innerText = bobKey.length;
+                const bKeyUsed = document.getElementById('bobKeyUsedBadge');
+                if (bKeyUsed) { bKeyUsed.innerText = "No"; bKeyUsed.className = "px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 font-mono"; }
+            } else {
+                aliceKey = matching.map(e => e.alice_bit).join('');
+                bobKey = matching.map(e => e.bob_bit).join('');
+                const aKeyLenEl = document.getElementById('aliceKeyLen');
+                if (aKeyLenEl) aKeyLenEl.innerText = aliceKey.length;
+                const bKeyLenEl = document.getElementById('bobKeyLen');
+                if (bKeyLenEl) bKeyLenEl.innerText = bobKey.length;
+            }
 
             renderKeyDisplay('alice', aliceKey, bobKey);
             renderKeyDisplay('bob', bobKey, aliceKey);
-
-            document.getElementById('aliceKeyLen').innerText = aliceKey.length;
-            document.getElementById('bobKeyLen').innerText = bobKey.length;
-            const aKeyUsed = document.getElementById('aliceKeyUsedBadge');
-            if (aKeyUsed) { aKeyUsed.innerText = "No"; aKeyUsed.className = "px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 font-mono"; }
-            const bKeyUsed = document.getElementById('bobKeyUsedBadge');
-            if (bKeyUsed) { bKeyUsed.innerText = "No"; bKeyUsed.className = "px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 font-mono"; }
             updateKeyStatusBadges();
-
             syncWithBroadcast();
         }
 
@@ -3973,7 +3985,7 @@
                 const encBitsEl = document.getElementById('aliceEncryptedBits');
                 const keyUsedEl = document.getElementById('aliceKeyUsedBadge');
                 if (aliceEncrypted) {
-                    document.getElementById('aliceMsgBits').innerText = cipherBits;
+                    // Do NOT overwrite aliceMsgBits (it must remain the original plaintext message bits)
                     if (encTextEl) encTextEl.innerText = scrambledText || "[Cipher]";
                     if (encBitsEl) encBitsEl.innerText = cipherBits;
                     if (keyUsedEl) {
@@ -3983,6 +3995,10 @@
                 } else {
                     if (encTextEl) encTextEl.innerText = "-";
                     if (encBitsEl) encBitsEl.innerText = "-";
+                    if (keyUsedEl) {
+                        keyUsedEl.innerText = "No";
+                        keyUsedEl.className = "px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 font-mono";
+                    }
                     updateMessageBits();
                 }
             } else if (user === 'bob') {
@@ -4106,10 +4122,9 @@
             syncWithBroadcast();
         }
 
-        // Update charts & stats
-        function updateCharts() {
-            const dataToDisplay = isFiltered ? events.filter(e => e.basis_match) : events;
-            const aliceData = dataToDisplay.map((e, idx) => ({
+        // Prepare chart points for a dataset
+        function prepareChartPoints(datasetEvents) {
+            const rawAlice = datasetEvents.map((e, idx) => ({
                 x: idx + 1,
                 y: e.alice_polarization,
                 detector: e.alice_detector,
@@ -4117,7 +4132,7 @@
                 basis: e.alice_basis,
                 type: 'alice'
             }));
-            const bobData = dataToDisplay.map((e, idx) => ({
+            const rawBob = datasetEvents.map((e, idx) => ({
                 x: idx + 1,
                 y: e.bob_polarization,
                 detector: e.bob_detector,
@@ -4125,16 +4140,14 @@
                 basis: e.bob_basis,
                 type: 'bob'
             }));
-            
-            const agreedData = [];
-            const bobDiffData = [];
-            const aliceDiffData = [];
+            const agreed = [];
+            const bobDiff = [];
+            const aliceDiff = [];
 
-            dataToDisplay.forEach((e, idx) => {
+            datasetEvents.forEach((e, idx) => {
                 const xVal = idx + 1;
-                // If Alice and Bob agree on the same basis and no bit flip occurs, show only ONE green point!
                 if (e.basis_match && !e.is_bit_flip) {
-                    agreedData.push({
+                    agreed.push({
                         x: xVal,
                         y: e.bob_polarization,
                         detector: e.bob_detector,
@@ -4145,7 +4158,7 @@
                         type: 'agreed'
                     });
                 } else {
-                    bobDiffData.push({
+                    bobDiff.push({
                         x: xVal,
                         y: e.bob_polarization,
                         detector: e.bob_detector,
@@ -4153,7 +4166,7 @@
                         basis: e.bob_basis,
                         type: 'bob'
                     });
-                    aliceDiffData.push({
+                    aliceDiff.push({
                         x: xVal,
                         y: e.alice_polarization,
                         detector: e.alice_detector,
@@ -4163,38 +4176,62 @@
                     });
                 }
             });
+            return { rawAlice, rawBob, agreed, bobDiff, aliceDiff };
+        }
+
+        // QBER Visibility Rule: Show only when Dual View is active OR when Show All is checked for Alice or Bob
+        function updateQberVisibility() {
+            const wrapper = document.getElementById('statQberWrapper');
+            if (!wrapper) return;
+            const isDual = (currentViewMode === 'dual');
+            const aliceShowAll = document.getElementById('aliceShowAllToggle')?.checked;
+            const bobShowAll = document.getElementById('bobShowAllToggle')?.checked;
+            if (isDual || aliceShowAll || bobShowAll) {
+                wrapper.classList.remove('hidden');
+            } else {
+                wrapper.classList.add('hidden');
+            }
+        }
+
+        // Update charts & stats (independent filtering for Alice & Bob)
+        function updateCharts() {
+            const aliceEvents = aliceFiltered ? events.filter(e => e.basis_match) : events;
+            const bobEvents = bobFiltered ? events.filter(e => e.basis_match) : events;
+
+            const aliceData = prepareChartPoints(aliceEvents);
+            const bobData = prepareChartPoints(bobEvents);
 
             const aliceShowAll = document.getElementById('aliceShowAllToggle')?.checked;
             const bobShowAll = document.getElementById('bobShowAllToggle')?.checked;
 
             const allLegendHtml = `<span class="text-emerald-400 font-bold">Agreed Key</span> <span class="text-slate-500">|</span> <span class="text-rose-400 font-bold">Bob</span> <span class="text-slate-500">|</span> <span class="text-blue-400 font-bold">Alice</span>`;
 
-            // Update Alice Chart
+            // Update Alice Chart (filtered independently)
             if (aliceShowAll) {
-                aliceChart.data.datasets[0].data = agreedData;
-                aliceChart.data.datasets[1].data = bobDiffData;
-                aliceChart.data.datasets[2].data = aliceDiffData;
+                aliceChart.data.datasets[0].data = aliceData.agreed;
+                aliceChart.data.datasets[1].data = aliceData.bobDiff;
+                aliceChart.data.datasets[2].data = aliceData.aliceDiff;
                 const leg = document.getElementById('aliceChartLegend');
                 if (leg) leg.innerHTML = allLegendHtml;
             } else {
                 aliceChart.data.datasets[0].data = [];
                 aliceChart.data.datasets[1].data = [];
-                aliceChart.data.datasets[2].data = aliceData;
+                aliceChart.data.datasets[2].data = aliceData.rawAlice;
                 const leg = document.getElementById('aliceChartLegend');
                 if (leg) leg.innerHTML = `<span class="text-blue-400 font-bold">Alice</span>`;
             }
             aliceChart.update('none');
 
-            // Update Bob Chart
+            // Update Bob Chart (filtered independently)
             if (bobShowAll) {
-                bobChart.data.datasets[0].data = agreedData;
-                bobChart.data.datasets[1].data = bobDiffData;
-                bobChart.data.datasets[2].data = aliceDiffData;
+                bobChart.data.datasets[0].data = bobData.agreed;
+                bobChart.data.datasets[1].data = bobData.bobDiff;
+                bobChart.data.datasets[2].data = bobData.aliceDiff;
                 const leg = document.getElementById('bobChartLegend');
                 if (leg) leg.innerHTML = allLegendHtml;
             } else {
                 bobChart.data.datasets[0].data = [];
-                bobChart.data.datasets[1].data = bobData;
+                bobChart.data.datasets[1].data = bobData.rawBob;
                 bobChart.data.datasets[2].data = [];
                 const leg = document.getElementById('bobChartLegend');
                 if (leg) leg.innerHTML = `<span class="text-rose-400 font-bold">Bob</span>`;
@@ -4202,6 +4239,7 @@
             bobChart.update('none');
             renderKeyDisplay('alice', aliceKey, bobKey);
             renderKeyDisplay('bob', bobKey, aliceKey);
+            updateQberVisibility();
         }
 
         function updateStats() {
@@ -4211,6 +4249,7 @@
             const flips = matching.filter(e => e.is_bit_flip).length;
             const qber = matching.length > 0 ? ((flips / matching.length) * 100).toFixed(1) : "0.0";
             document.getElementById('statQber').innerText = qber + "%";
+            updateQberVisibility();
         }
 
         let turnSoundEnabled = true;
@@ -4374,6 +4413,8 @@
             bobCiphertext = "";
             receivedByBob = null;
             receivedByAlice = null;
+            aliceFiltered = false;
+            bobFiltered = false;
             isFiltered = false;
             activePhotons = [];
             clickRipples = [];
@@ -4516,38 +4557,34 @@
         }
 
         function openPopoutBob() {
-            window.open('index.html?popout=true', 'BobWindow', 'width=950,height=850');
-            setViewMode('alice');
             syncWithBroadcast();
+            setViewMode('alice');
+            window.open('index.html?popout=true', 'BobWindow', 'width=950,height=850');
         }
 
         function syncWithBroadcast() {
+            if (isPopout) return; // Secondary display never overwrites main state
             const payload = {
                 type: 'SYNC_STATE',
                 events: events,
                 activeTurn: activeTurn,
                 aliceChosenBasis: aliceChosenBasis,
                 bobChosenBasis: bobChosenBasis,
-                isFiltered: isFiltered,
+                aliceFiltered: aliceFiltered,
+                bobFiltered: bobFiltered,
+                isFiltered: (aliceFiltered && bobFiltered),
                 aliceKey: aliceKey,
                 bobKey: bobKey,
                 aliceEncrypted: aliceEncrypted,
-                bobEncrypted: bobEncrypted,
                 aliceCiphertext: aliceCiphertext,
-                bobCiphertext: bobCiphertext,
                 receivedByBob: receivedByBob,
-                receivedByAlice: receivedByAlice,
                 useRealHardware: useRealHardware,
                 aliceMsgText: document.getElementById('aliceMsgText')?.value || '',
-                bobMsgText: document.getElementById('bobMsgText')?.value || '',
                 encoding: document.getElementById('encodingSelect')?.value || '5bit',
                 bobDecryptedText: document.getElementById('bobDecryptedText')?.innerText || '-',
                 bobDecryptedBits: document.getElementById('bobDecryptedBits')?.innerText || '-',
-                aliceDecryptedText: document.getElementById('aliceDecryptedText')?.innerText || '-',
-                aliceDecryptedBits: document.getElementById('aliceDecryptedBits')?.innerText || '-',
                 aliceKeyUsed: document.getElementById('aliceKeyUsedBadge')?.innerText || 'No',
-                bobKeyUsed: document.getElementById('bobKeyUsedBadge')?.innerText || 'No',
-                hwBasisOverride: document.getElementById('hwBasisOverrideToggle')?.checked || false
+                bobKeyUsed: document.getElementById('bobKeyUsedBadge')?.innerText || 'No'
             };
             if (broadcast) {
                 try { broadcast.postMessage(payload); } catch (e) {}
@@ -4569,25 +4606,29 @@
             }
             if (data.type === 'SYNC_STATE' || data.events !== undefined) {
                 if (data.events !== undefined) events = data.events || [];
-                if (data.isFiltered !== undefined) isFiltered = !!data.isFiltered;
+                if (data.aliceFiltered !== undefined) aliceFiltered = !!data.aliceFiltered;
+                if (data.bobFiltered !== undefined) bobFiltered = !!data.bobFiltered;
+                if (data.isFiltered !== undefined && data.aliceFiltered === undefined) {
+                    aliceFiltered = !!data.isFiltered;
+                    bobFiltered = !!data.isFiltered;
+                    isFiltered = !!data.isFiltered;
+                } else {
+                    isFiltered = (aliceFiltered && bobFiltered);
+                }
                 if (data.aliceKey !== undefined) aliceKey = data.aliceKey || "";
                 if (data.bobKey !== undefined) bobKey = data.bobKey || "";
                 if (data.aliceEncrypted !== undefined) aliceEncrypted = !!data.aliceEncrypted;
-                if (data.bobEncrypted !== undefined) bobEncrypted = !!data.bobEncrypted;
                 if (data.aliceCiphertext !== undefined) aliceCiphertext = data.aliceCiphertext || "";
-                if (data.bobCiphertext !== undefined) bobCiphertext = data.bobCiphertext || "";
                 if (data.receivedByBob !== undefined) receivedByBob = data.receivedByBob || null;
-                if (data.receivedByAlice !== undefined) receivedByAlice = data.receivedByAlice || null;
                 if (data.aliceChosenBasis !== undefined) aliceChosenBasis = data.aliceChosenBasis;
                 if (data.bobChosenBasis !== undefined) bobChosenBasis = data.bobChosenBasis;
 
                 if (data.useRealHardware !== undefined && data.useRealHardware !== useRealHardware) {
-                    setHardwareMode(data.useRealHardware, false);
-                }
-                if (data.hwBasisOverride !== undefined) {
-                    const ovEl = document.getElementById('hwBasisOverrideToggle');
-                    if (ovEl && ovEl.checked !== data.hwBasisOverride) {
-                        ovEl.checked = data.hwBasisOverride;
+                    if (isPopout) {
+                        // In popout, just reflect the hardware flag locally without calling backend mode/laser endpoints
+                        useRealHardware = !!data.useRealHardware;
+                    } else {
+                        setHardwareMode(data.useRealHardware, false);
                     }
                 }
 
@@ -4638,18 +4679,14 @@
                 const bEncLabel = document.getElementById('bobEncryptLabel');
                 if (bEncLabel) bEncLabel.innerText = bobEncrypted ? "Encrypted ✓" : "Encrypt Msg";
 
+                const curMode = document.getElementById('encodingSelect')?.value || '5bit';
                 const aEncText = document.getElementById('aliceEncryptedText');
                 const aEncBits = document.getElementById('aliceEncryptedBits');
-                if (aEncText) aEncText.innerText = aliceEncrypted ? (aliceCiphertext || "[Cipher]") : "-";
+                const aScrambled = aliceCiphertext ? bitsToText(aliceCiphertext, curMode) : "[Cipher]";
+                if (aEncText) aEncText.innerText = aliceEncrypted ? (aScrambled || "[Cipher]") : "-";
                 if (aEncBits) aEncBits.innerText = aliceEncrypted ? aliceCiphertext : "-";
 
-                const bEncText = document.getElementById('bobEncryptedText');
-                const bEncBits = document.getElementById('bobEncryptedBits');
-                if (bEncText) bEncText.innerText = bobEncrypted ? (bobCiphertext || "[Cipher]") : "-";
-                if (bEncBits) bEncBits.innerText = bobEncrypted ? bobCiphertext : "-";
-
-                // Re-calculate Alice's message binary and required key length
-                const curMode = document.getElementById('encodingSelect')?.value || '5bit';
+                // Re-calculate Alice's message binary and required key length (do not replace with ciphertext)
                 const curAliceText = document.getElementById('aliceMsgText')?.value || '';
                 const curAliceBits = textToBits(curAliceText, curMode);
                 const aGroup = (curMode === '5bit') ? 5 : 8;
@@ -4658,7 +4695,7 @@
                     aFormatted += curAliceBits.substring(i, i + aGroup) + " ";
                 }
                 const aBitsEl = document.getElementById('aliceMsgBits');
-                if (aBitsEl) aBitsEl.innerText = aliceEncrypted ? (aliceCiphertext || "-") : (aFormatted.trim() || "-");
+                if (aBitsEl) aBitsEl.innerText = aFormatted.trim() || "-";
                 const aLenEl = document.getElementById('aliceMsgLen');
                 if (aLenEl) aLenEl.innerText = curAliceBits.length;
                 const aReqEl = document.getElementById('aliceReqKeyLen');
@@ -4760,9 +4797,9 @@
             }
         }
 
-        // Global F-Key Hotkeys
+        // Global F-Key Hotkeys (Handled exclusively in main display; secondary popout is display-only)
         window.addEventListener('keydown', (e) => {
-            // Always consider keypress to be from whoever's turn it is
+            if (isPopout) return; // Second keyboard inputs to the PC are captured here in the main window
             const targetUser = activeTurn;
             if (e.key === 'Escape' && tourActive) {
                 e.preventDefault();
@@ -4786,7 +4823,7 @@
                     break;
                 case 'F3':
                     e.preventDefault();
-                    filterByBases();
+                    filterByBases(targetUser);
                     break;
                 case 'F4':
                     e.preventDefault();
@@ -4794,21 +4831,15 @@
                     break;
                 case 'F5':
                     e.preventDefault();
-                    toggleEncryptMessage(targetUser);
+                    toggleEncryptMessage('alice');
                     break;
                 case 'F6':
                     e.preventDefault();
-                    sendMessage(targetUser);
+                    sendMessage('alice');
                     break;
                 case 'F7':
                     e.preventDefault();
-                    if (receivedByBob && !receivedByAlice) {
-                        decryptMessage('bob');
-                    } else if (receivedByAlice && !receivedByBob) {
-                        decryptMessage('alice');
-                    } else {
-                        decryptMessage(targetUser);
-                    }
+                    decryptMessage('bob');
                     break;
                 case 'F9':
                     e.preventDefault();
@@ -4841,22 +4872,13 @@
             updateMessageBits();
             refreshCoincidenceMatrix();
             setTurn('alice', false); // Initial setup without chime
-            scanThorlabsHardware();
 
-            // Start optical bench rendering loop
-            requestAnimationFrame(drawOpticalBench);
+            // Initial View setup (Main display defaults to Alice; Popout display defaults to Bob)
+            if (isPopout) {
+                turnSoundEnabled = false;
+                setViewMode('bob');
 
-            // Fetch initial shared state from server for cross-machine / cross-browser sync
-            fetch('/api/session/state')
-                .then(r => r.json())
-                .then(state => {
-                    if (state && Object.keys(state).length > 0) {
-                        handleBroadcastMessage(state);
-                    }
-                }).catch(() => {});
-
-            // Periodic sync check across network / devices
-            setInterval(() => {
+                // Fetch current state from server and request live state from main window
                 fetch('/api/session/state')
                     .then(r => r.json())
                     .then(state => {
@@ -4864,23 +4886,28 @@
                             handleBroadcastMessage(state);
                         }
                     }).catch(() => {});
-            }, 1500);
 
-            // Handle role URL parameter
-            const params = new URLSearchParams(window.location.search);
-            if (params.get('role') === 'bob') {
-                setViewMode('bob');
                 if (broadcast) {
                     broadcast.postMessage({ type: 'REQUEST_STATE' });
                     setTimeout(() => broadcast && broadcast.postMessage({ type: 'REQUEST_STATE' }), 200);
                     setTimeout(() => broadcast && broadcast.postMessage({ type: 'REQUEST_STATE' }), 600);
                 }
-            } else if (params.get('role') === 'alice') {
-                setViewMode('alice');
-                if (broadcast) {
-                    broadcast.postMessage({ type: 'REQUEST_STATE' });
-                    setTimeout(() => broadcast && broadcast.postMessage({ type: 'REQUEST_STATE' }), 200);
-                }
+
+                // Periodic sync fallback in popout only (never overwrites main window state)
+                setInterval(() => {
+                    fetch('/api/session/state')
+                        .then(r => r.json())
+                        .then(state => {
+                            if (state && Object.keys(state).length > 0) {
+                                handleBroadcastMessage(state);
+                            }
+                        }).catch(() => {});
+                }, 1500);
+            } else {
+                const initialView = urlParams.get('view') || 'alice';
+                setViewMode(initialView);
+                scanThorlabsHardware();
+                requestAnimationFrame(drawOpticalBench);
             }
         };
     </script>
